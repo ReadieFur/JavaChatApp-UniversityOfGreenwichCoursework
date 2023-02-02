@@ -9,7 +9,8 @@
             "name": "Java: Launch App",
             "request": "launch",
             "mainClass": "App",
-            "projectName": "University_Of_Greenwich-COMP1549-Advanced_Programming-Coursework_1910754f"
+            "projectName": "University_Of_Greenwich-COMP1549-Advanced_Programming-Coursework_1910754f",
+            "args": "127.0.0.1 8080"
         }
     ]
 }
