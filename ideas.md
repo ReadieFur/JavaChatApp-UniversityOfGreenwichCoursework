@@ -1,2 +1,4 @@
-- See if there is a builtin web-sockets library
+- See if there is a builtin websocket library.
 - If not look into using a tcp connection and either try to replicate the websocket protocol or implement my own custom protocol.
+- When migrating hosts, have the server tell the clients which client to connect to as the new host.
+- If the host server ends unexpectedly, have the clients use their peer list and try to connect to each one in order, if unsuccessful, become the host.
