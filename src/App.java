@@ -3,9 +3,6 @@ import java.util.regex.Pattern;
 
 public class App
 {
-    private static Boolean canExit = false;
-    private static HostInterface task;
-
     public static void main(String[] args)
     {
         String initialServerAddress = ""; //Value required to satisfy the compiler.
@@ -58,20 +55,9 @@ public class App
             }
         }
 
-        if (!Server.FindServer(initialServerAddress, port))
-            task = new Server(port);
-        else
-            task = new Client(initialServerAddress, port);
-
-        task.start();
-
+        //For now wait indefinitely.
         while (true)
         {
-            // String message = task.GetNextMessage();
-            // if (message == "exit")
-            //     break;
-
-            //For now wait indefinitely.
             try { Thread.sleep(100); }
             catch (InterruptedException e) {}
         }
