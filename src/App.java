@@ -1,6 +1,8 @@
 import java.util.Scanner;
 import java.util.regex.Pattern;
 
+import readiefur.helpers.sockets.ServerManager;
+
 public class App
 {
     public static void main(String[] args)
@@ -55,7 +57,14 @@ public class App
             }
         }
 
-        //For now wait indefinitely.
+        ServerManager serverManager = new ServerManager(port);
+        serverManager.onConnected.Add(guid -> System.out.println("Client connected, GUID: " + guid));
+        serverManager.onMessage.Add(kvp -> System.out.println("Message received from client '" + kvp.GetKey() + "': " + kvp.GetValue()));
+        serverManager.onClose.Add(guid -> System.out.println("Client with GUID '" + guid + "' disconnected."));
+        serverManager.onError.Add(kvp -> System.out.println("Error from client '" + kvp.GetKey() + "': " + kvp.GetValue().getMessage()));
+        serverManager.start();
+
+        //For now, wait indefinitely.
         while (true)
         {
             try { Thread.sleep(100); }

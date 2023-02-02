@@ -1,3 +1,5 @@
+package readiefur.helpers;
+
 public class KeyValuePair<TKey, TValue>
 {
     private TKey key;

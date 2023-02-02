@@ -1,6 +1,10 @@
+package readiefur.helpers.sockets;
+
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+
+import readiefur.helpers.Event;
 
 public class ServerClientHost extends Thread
 {
