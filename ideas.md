@@ -1,0 +1,2 @@
+- See if there is a builtin web-sockets library
+- If not look into using a tcp connection and either try to replicate the websocket protocol or implement my own custom protocol.

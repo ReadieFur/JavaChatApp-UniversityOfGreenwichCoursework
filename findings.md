@@ -1,0 +1,1 @@
+While I still am not a huge fan of Java and find some aspects of it to not be so nice, I have found that doing certain tasks like sending data over sockets is much easier, especially sterilizing structs as such tasks are fully managed, unlike C# where you must still compute the size of the buffer you are to send and then manually deserialize if need be.
