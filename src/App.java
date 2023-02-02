@@ -1,6 +1,7 @@
 import java.util.Scanner;
 import java.util.regex.Pattern;
 
+import readiefur.helpers.sockets.Client;
 import readiefur.helpers.sockets.ServerManager;
 
 public class App
@@ -57,18 +58,39 @@ public class App
             }
         }
 
+        //#region Testing
         ServerManager serverManager = new ServerManager(port);
-        serverManager.onConnected.Add(guid -> System.out.println("Client connected, GUID: " + guid));
+        serverManager.onConnect.Add(guid -> System.out.println("Client connected, GUID: " + guid));
         serverManager.onMessage.Add(kvp -> System.out.println("Message received from client '" + kvp.GetKey() + "': " + kvp.GetValue()));
         serverManager.onClose.Add(guid -> System.out.println("Client with GUID '" + guid + "' disconnected."));
         serverManager.onError.Add(kvp -> System.out.println("Error from client '" + kvp.GetKey() + "': " + kvp.GetValue().getMessage()));
         serverManager.start();
 
-        //For now, wait indefinitely.
-        while (true)
-        {
-            try { Thread.sleep(100); }
-            catch (InterruptedException e) {}
-        }
+        Client client = new Client(initialServerAddress, port);
+        client.onConnect.Add(nul -> System.out.println("Connected to server."));
+        client.onMessage.Add(message -> System.out.println("Message received from server: " + message));
+        client.onClose.Add(nul -> System.out.println("Disconnected from server."));
+        client.onError.Add(ex -> System.out.println("Error from server: " + ex.getMessage()));
+        client.start();
+
+        //Give the server and client a moment to connect.
+        try { Thread.sleep(100); }
+        catch (InterruptedException e) {}
+
+        serverManager.BroadcastMessage("Hello from the server!");
+        client.SendMessage("Hello from the client!");
+
+        // client.Dispose();
+
+        // //For now, wait indefinitely.
+        // while (true)
+        // {
+        //     try { Thread.sleep(100); }
+        //     catch (InterruptedException e) {}
+        // }
+
+        //I just realized accidentally that java doesn't exit when the main thread ends if other threads are running?
+        System.exit(0);
+        //#endregion
     }
 }

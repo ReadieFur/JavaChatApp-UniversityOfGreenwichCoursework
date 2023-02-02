@@ -10,6 +10,7 @@ import readiefur.helpers.Event;
 import readiefur.helpers.KeyValuePair;
 
 //This is taking inspiration from my CSharpTools.Pipes project as the way Java handles networking is similar: https://github.com/ReadieFur/CSharpTools/blob/main/src/CSharpTools.Pipes
+//TODO: Add a dispose method.
 public class ServerManager extends Thread
 {
     //#region Instance
@@ -17,7 +18,7 @@ public class ServerManager extends Thread
     private ServerSocket server = null;
     private Map<String, ServerClientHost> servers = new HashMap<>();
     //TODO: Accessability modifiers.
-    public Event<String> onConnected = new Event<>();
+    public Event<String> onConnect = new Event<>();
     public Event<KeyValuePair<String, Object>> onMessage = new Event<>();
     public Event<String> onClose = new Event<>();
     public Event<KeyValuePair<String, Exception>> onError = new Event<>();
@@ -43,7 +44,7 @@ public class ServerManager extends Thread
                 serverClientHost.onMessage.Add(obj -> OnMessage(guid, obj)); //This may need encapsulating to maintain access to instance variables.
                 serverClientHost.onClose.Add(nul -> OnClose(guid));
                 serverClientHost.onError.Add(ex -> OnError(guid, ex));
-                onConnected.Invoke(guid);
+                onConnect.Invoke(guid);
             }
         }
         catch (IOException ex)
