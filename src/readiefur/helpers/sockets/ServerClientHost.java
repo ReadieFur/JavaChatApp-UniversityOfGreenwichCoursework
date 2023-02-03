@@ -1,5 +1,6 @@
 package readiefur.helpers.sockets;
 
+import java.io.EOFException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -74,6 +75,11 @@ public class ServerClientHost extends Thread
         {
             Object data;
             try { data = inputStream.readObject(); }
+            catch (EOFException ex)
+            {
+                //Occurs when the CLIENT disconnects (as opposed to the server closing the connection).
+                break;
+            }
             catch (Exception ex)
             {
                 onError.Invoke(ex);

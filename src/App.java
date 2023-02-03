@@ -60,17 +60,17 @@ public class App
 
         //#region Testing
         ServerManager serverManager = new ServerManager(port);
-        serverManager.onConnect.Add(guid -> System.out.println("Client connected, GUID: " + guid));
-        serverManager.onMessage.Add(kvp -> System.out.println("Message received from client '" + kvp.GetKey() + "': " + kvp.GetValue()));
-        serverManager.onClose.Add(guid -> System.out.println("Client with GUID '" + guid + "' disconnected."));
-        serverManager.onError.Add(kvp -> System.out.println("Error from client '" + kvp.GetKey() + "': " + kvp.GetValue().getMessage()));
+        serverManager.onConnect.Add(guid -> System.out.println("[SERVER] '" + guid + "' connected."));
+        serverManager.onMessage.Add(kvp -> System.out.println("[SERVER] Message from '" + kvp.GetKey() + "': " + kvp.GetValue()));
+        serverManager.onClose.Add(guid -> System.out.println("[SERVER] '" + guid + "' disconnected."));
+        serverManager.onError.Add(kvp -> System.out.println("[SERVER] Error at '" + kvp.GetKey() + "': " + kvp.GetValue().getMessage()));
         serverManager.start();
 
         Client client = new Client(initialServerAddress, port);
-        client.onConnect.Add(nul -> System.out.println("Connected to server."));
-        client.onMessage.Add(message -> System.out.println("Message received from server: " + message));
-        client.onClose.Add(nul -> System.out.println("Disconnected from server."));
-        client.onError.Add(ex -> System.out.println("Error from server: " + ex.getMessage()));
+        client.onConnect.Add(nul -> System.out.println("[CLIENT] Connected to server."));
+        client.onMessage.Add(message -> System.out.println("[CLIENT] Message received from server: " + message));
+        client.onClose.Add(nul -> System.out.println("[CLIENT] Disconnected from server."));
+        client.onError.Add(ex -> System.out.println("[CLIENT] Error: " + ex.getMessage()));
         client.start();
 
         //Give the server and client a moment to connect.
@@ -81,7 +81,7 @@ public class App
         serverManager.SendMessage(serverManager.GetClients().get(0), "Private message.");
         client.SendMessage("Hello from the client!");
 
-        // client.Dispose();
+        client.Dispose();
 
         // //For now, wait indefinitely.
         // while (true)

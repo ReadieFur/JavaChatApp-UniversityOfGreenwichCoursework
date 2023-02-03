@@ -88,6 +88,7 @@ public class ServerManager extends Thread
     private void OnClose(UUID uuid)
     {
         servers.remove(uuid);
+        onClose.Invoke(uuid);
     }
 
     private void OnError(UUID uuid, Exception ex)
