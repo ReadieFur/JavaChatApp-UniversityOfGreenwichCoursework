@@ -69,7 +69,8 @@ public class ServerManager extends Thread
         onError.Invoke(new KeyValuePair<>(guid, ex));
     }
 
-    public void SendMessage(String guid, Object data)
+    //A NullPointerException can occur if the guid is not found or a race condition occurs.
+    public void SendMessage(String guid, Object data) throws NullPointerException
     {
         servers.get(guid).SendMessage(data);
     }

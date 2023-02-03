@@ -1,6 +1,5 @@
 package readiefur.helpers.sockets;
 
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -11,6 +10,11 @@ public class ServerClientHost extends Thread
 {
     private Boolean isDisposed = false;
     private Socket socket;
+    //Initialized when required (I couldn't seem to figure out why it would hang if I tried to set this in the constructor).
+    //I presume it may have been because the stream wasn't ready yet?
+    //The reason for reusing these objects is I had read that only one object stream should be instantiated per stream, see: https://stackoverflow.com/questions/2393179/streamcorruptedexception-invalid-type-code-ac
+    private ObjectInputStream inputStream = null;
+    private ObjectOutputStream outputStream = null;
 
     //TODO: Accessability modifiers.
     public Event<Object> onMessage = new Event<>();
@@ -55,8 +59,11 @@ public class ServerClientHost extends Thread
             return; //I don't think this is needed if the thread interrupt is called.
         }
 
-        ObjectInputStream inputStream;
-        try { inputStream = new ObjectInputStream(socket.getInputStream()); }
+        try
+        {
+            if (inputStream == null)
+                inputStream = new ObjectInputStream(socket.getInputStream());
+        }
         catch (Exception ex)
         {
             onError.Invoke(ex);
@@ -86,7 +93,8 @@ public class ServerClientHost extends Thread
 
         try
         {
-            ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
+            if (outputStream == null)
+                outputStream = new ObjectOutputStream(socket.getOutputStream());
             outputStream.writeObject(data);
         }
         catch (Exception ex)

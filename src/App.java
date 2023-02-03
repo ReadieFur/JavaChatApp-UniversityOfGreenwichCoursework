@@ -74,10 +74,11 @@ public class App
         client.start();
 
         //Give the server and client a moment to connect.
-        try { Thread.sleep(100); }
+        try { Thread.sleep(500); }
         catch (InterruptedException e) {}
 
         serverManager.BroadcastMessage("Hello from the server!");
+        serverManager.SendMessage("127.0.0.1", "Private message.");
         client.SendMessage("Hello from the client!");
 
         // client.Dispose();
@@ -89,8 +90,8 @@ public class App
         //     catch (InterruptedException e) {}
         // }
 
-        //I just realized accidentally that java doesn't exit when the main thread ends if other threads are running?
-        System.exit(0);
+        //I realized accidentally that java doesn't exit when the main thread ends if other threads are running?
+        // System.exit(0);
         //#endregion
     }
 }
