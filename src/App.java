@@ -57,7 +57,18 @@ public class App
                 userInput.close();
             }
         }
+        if (port < 0 || port > 65535)
+        {
+            System.out.println("Invalid port.");
+            System.exit(1);
+        }
 
+        //Development only.
+        RunTests(initialServerAddress, port);
+    }
+
+    private static void RunTests(String serverAddress, int port)
+    {
         //#region Testing
         ServerManager serverManager = new ServerManager(port);
         serverManager.onConnect.Add(guid -> System.out.println("[SERVER] '" + guid + "' connected."));
@@ -66,14 +77,14 @@ public class App
         serverManager.onError.Add(kvp -> System.out.println("[SERVER] Error at '" + kvp.GetKey() + "': " + kvp.GetValue().getMessage()));
         serverManager.start();
 
-        Client client1 = new Client(initialServerAddress, port);
+        Client client1 = new Client(serverAddress, port);
         client1.onConnect.Add(nul -> System.out.println("[CLIENT1] Connected to server."));
         client1.onMessage.Add(message -> System.out.println("[CLIENT1] Message received from server: " + message));
         client1.onClose.Add(nul -> System.out.println("[CLIENT1] Disconnected from server."));
         client1.onError.Add(ex -> System.out.println("[CLIENT1] Error: " + ex.getMessage()));
         client1.start();
 
-        Client client2 = new Client(initialServerAddress, port);
+        Client client2 = new Client(serverAddress, port);
         client2.onConnect.Add(nul -> System.out.println("[CLIENT2] Connected to server."));
         client2.onMessage.Add(message -> System.out.println("[CLIENT2] Message received from server: " + message));
         client2.onClose.Add(nul -> System.out.println("[CLIENT2] Disconnected from server."));
