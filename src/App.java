@@ -1,13 +1,20 @@
 import java.util.Scanner;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
+import readiefur.helpers.ManualResetEvent;
 import readiefur.helpers.sockets.Client;
 import readiefur.helpers.sockets.ServerManager;
 
 public class App
 {
+    private static Boolean isHost = false;
+    private static String serverIPAddress;
+    private static int port;
+
     public static void main(String[] args)
     {
+        //#region Parse command line arguments
         String initialServerAddress = ""; //Value required to satisfy the compiler.
         if (args.length > 0)
         {
@@ -62,60 +69,49 @@ public class App
             System.out.println("Invalid port.");
             System.exit(1);
         }
+        //#endregion
 
-        //Development only.
-        RunTests(initialServerAddress, port);
+        serverIPAddress = initialServerAddress;
+        App.port = port;
+
+        Begin();
     }
 
-    private static void RunTests(String serverAddress, int port)
+    private static Boolean FindHost(String ipAddress, int port)
     {
-        //#region Testing
-        ServerManager serverManager = new ServerManager(port);
-        serverManager.onConnect.Add(guid -> System.out.println("[SERVER] '" + guid + "' connected."));
-        serverManager.onMessage.Add(kvp -> System.out.println("[SERVER] Message from '" + kvp.GetKey() + "': " + kvp.GetValue()));
-        serverManager.onClose.Add(guid -> System.out.println("[SERVER] '" + guid + "' disconnected."));
-        serverManager.onError.Add(kvp -> System.out.println("[SERVER] Error at '" + kvp.GetKey() + "': " + kvp.GetValue().getMessage()));
-        serverManager.start();
+        ManualResetEvent resetEvent = new ManualResetEvent(false);
 
-        Client client1 = new Client(serverAddress, port);
-        client1.onConnect.Add(nul -> System.out.println("[CLIENT1] Connected to server."));
-        client1.onMessage.Add(message -> System.out.println("[CLIENT1] Message received from server: " + message));
-        client1.onClose.Add(nul -> System.out.println("[CLIENT1] Disconnected from server."));
-        client1.onError.Add(ex -> System.out.println("[CLIENT1] Error: " + ex.getMessage()));
-        client1.start();
+        Client client = new Client(ipAddress, port);
+        client.onConnect.Add(nul -> resetEvent.Set());
+        client.start();
 
-        Client client2 = new Client(serverAddress, port);
-        client2.onConnect.Add(nul -> System.out.println("[CLIENT2] Connected to server."));
-        client2.onMessage.Add(message -> System.out.println("[CLIENT2] Message received from server: " + message));
-        client2.onClose.Add(nul -> System.out.println("[CLIENT2] Disconnected from server."));
-        client2.onError.Add(ex -> System.out.println("[CLIENT2] Error: " + ex.getMessage()));
-        client2.start();
+        try { resetEvent.WaitOne(1000); }
+        catch (TimeoutException e) {}
 
-        //Give the server and client a moment to connect.
-        try { Thread.sleep(500); }
-        catch (InterruptedException e) {}
+        Boolean hostFound = client.IsConnected();
 
-        serverManager.BroadcastMessage("Hello from the server!");
-        serverManager.SendMessage(serverManager.GetClients().get(0), "Private message to client1.");
-        client1.SendMessage("Hello from client1!");
-        // client2.SendMessage("Hello from client2!");
+        client.Dispose();
 
-        //Thread count should be start+4.
-        client1.Dispose();
-        serverManager.Dispose();
-        //To test closure, I will not manually close the client2 socket, this should be done automatically when the server is disposed.
-        // client2.Dispose();
-        //Thread count should be start+0 (program should be able to naturally exit).
+        return hostFound;
+    }
 
-        // //For now, wait indefinitely.
-        // while (true)
-        // {
-        //     try { Thread.sleep(100); }
-        //     catch (InterruptedException e) {}
-        // }
+    private static void Begin()
+    {
+        //Look for a host.
+        isHost = !FindHost(serverIPAddress, port);
 
-        //I realized accidentally that java doesn't exit when the main thread ends if other threads are running?
-        // System.exit(0);
-        //#endregion
+        //If a host was not found, begin hosting.
+        if (isHost)
+        {
+            //Start the server.
+            ServerManager serverManager = new ServerManager(port);
+            serverManager.start();
+        }
+        else
+        {
+            //Connect to the server.
+            Client client = new Client(serverIPAddress, port);
+            client.start();
+        }
     }
 }

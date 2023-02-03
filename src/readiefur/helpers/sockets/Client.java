@@ -76,6 +76,11 @@ public class Client extends Thread implements IDisposable
         }
     }
 
+    public Boolean IsConnected()
+    {
+        return socket != null && socket.isConnected();
+    }
+
     @Override
     public void run()
     {
