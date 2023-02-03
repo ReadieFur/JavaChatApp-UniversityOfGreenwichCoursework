@@ -6,8 +6,9 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 
 import readiefur.helpers.Event;
+import readiefur.helpers.IDisposable;
 
-public class ServerClientHost extends Thread
+public class ServerClientHost extends Thread implements IDisposable
 {
     private Boolean isDisposed = false;
     private Socket socket;

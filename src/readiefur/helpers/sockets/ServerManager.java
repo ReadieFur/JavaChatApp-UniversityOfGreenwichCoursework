@@ -10,11 +10,12 @@ import java.util.Map;
 import java.util.UUID;
 
 import readiefur.helpers.Event;
+import readiefur.helpers.IDisposable;
 import readiefur.helpers.KeyValuePair;
 
 //This is taking inspiration from my CSharpTools.Pipes project as the way Java handles networking is similar: https://github.com/ReadieFur/CSharpTools/blob/main/src/CSharpTools.Pipes
 //TODO: Add a dispose method.
-public class ServerManager extends Thread
+public class ServerManager extends Thread implements IDisposable
 {
     public static final UUID SERVER_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
@@ -33,6 +34,10 @@ public class ServerManager extends Thread
     public ServerManager(int port)
     {
         this.port = port;
+    }
+
+    public void Dispose()
+    {
     }
 
     @Override

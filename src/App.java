@@ -82,6 +82,7 @@ public class App
         client.SendMessage("Hello from the client!");
 
         client.Dispose();
+        serverManager.Dispose();
 
         // //For now, wait indefinitely.
         // while (true)
