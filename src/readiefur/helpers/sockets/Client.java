@@ -15,6 +15,7 @@ public class Client extends Thread implements IDisposable
     private String address;
     private int port;
     private Socket socket = null;
+    private Boolean hasBeenConnected = false;
     private ObjectInputStream inputStream = null;
     private ObjectOutputStream outputStream = null;
 
@@ -38,53 +39,56 @@ public class Client extends Thread implements IDisposable
                 return;
             isDisposed = true;
 
-            /*This can be called twice if the Dispose method is called and the exiting thread then tries to call this method.
-             *If that happens, we can safely ignore it.*/
-            if (socket == null)
-                return;
-
-            //End the thread (if it's still running).
-            try
+            //Close the socket.
+            if (socket != null)
             {
-                if (this.isAlive())
-                    this.interrupt();
+                try { socket.close(); }
+                catch (Exception ex) { onError.Invoke(ex); }
+                socket = null;
+
+                //If the socket was open, we can fire the onClose event.
+                if (hasBeenConnected)
+                    onClose.Invoke(null);
             }
-            catch (Exception ex) { onError.Invoke(ex); }
 
             //Close the streams.
-            try { inputStream.close(); }
-            catch (Exception ex) { onError.Invoke(ex); }
-            inputStream = null;
+            if (inputStream != null)
+            {
+                try { inputStream.close(); }
+                catch (Exception ex) { onError.Invoke(ex); }
+                inputStream = null;
+            }
 
-            try { outputStream.close(); }
-            catch (Exception ex) { onError.Invoke(ex); }
-            outputStream = null;
+            //The output stream may not have been initialized if the client never sent a message.
+            if (outputStream != null)
+            {
+                try { outputStream.close(); }
+                catch (Exception ex) { onError.Invoke(ex); }
+                outputStream = null;
+            }
 
-            //Close the socket.
-            try { socket.close(); }
-            catch (Exception ex) { onError.Invoke(ex); }
-            socket = null;
-
-            onClose.Invoke(null);
+            //End the thread (if it's still running).
+            if (this.isAlive())
+            {
+                try { this.interrupt(); }
+                catch (Exception ex) { onError.Invoke(ex); }
+            }
         }
     }
 
     @Override
     public void run()
     {
-        if (isDisposed)
-        {
-            this.interrupt();
-            return; //I don't think this is needed if the thread interrupt is called.
-        }
-
         try { socket = new Socket(address, port); }
         catch (Exception ex)
         {
-            onError.Invoke(ex);
+            //It is possible that we end up disposing here before receiving a message, so return early.
+            if (!isDisposed)
+                onError.Invoke(ex);
             return;
         }
 
+        hasBeenConnected = true;
         onConnect.Invoke(null);
 
         try
@@ -106,12 +110,16 @@ public class Client extends Thread implements IDisposable
                 Object message = inputStream.readObject();
                 onMessage.Invoke(message);
             }
-            catch (EOFException ex)
+            catch (Exception ex)
             {
-                //Occurs when the SERVER disconnects (as opposed to the client closing the connection).
-                break;
+                //EOFException occurs when the SERVER disconnects (as opposed to the client closing the connection).
+                //Note how we don't check if the socket is closed here, this is because connection may have unexpectedly ended.
+                //We can safely these exceptions.
+                if (ex instanceof EOFException || isDisposed || socket == null)
+                    break;
+
+                onError.Invoke(ex);
             }
-            catch (Exception ex) { onError.Invoke(ex); }
         }
 
         /*In my previous tests I had this close the connection and thread as opposed to disposing of the this instance.

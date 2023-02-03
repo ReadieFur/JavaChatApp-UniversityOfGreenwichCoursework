@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import readiefur.helpers.Event;
 import readiefur.helpers.IDisposable;
@@ -23,7 +24,7 @@ public class ServerManager extends Thread implements IDisposable
     private int port;
     protected Boolean isDisposed = false;
     protected ServerSocket server = null;
-    protected Map<UUID, ServerClientHost> servers = new HashMap<>();
+    protected ConcurrentHashMap<UUID, ServerClientHost> servers = new ConcurrentHashMap<>();
     /*I can use the final keyword here to make the instance readonly,
      *The only reason I wouldn't like to do this is inherited classes wouldn't be able to override this I don't believe.*/
     /*You will also notice that I haven't fully capitalized these variables as while they are "constant",
@@ -47,26 +48,28 @@ public class ServerManager extends Thread implements IDisposable
                 return;
             isDisposed = true;
 
-            /*This can be called twice if the Close method is called and the exiting thread then tries to call this method.
-             *If that happens, we can safely ignore it.*/
-            if (server == null)
-                return;
-
-            //Close all clients.
+            //Disconnect all clients.
             for (ServerClientHost serverClientHost : servers.values())
             {
                 try { serverClientHost.Dispose(); }
                 catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
             }
+            servers.clear();
 
             //Close the server.
-            try { server.close(); }
-            catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
-            server = null;
+            if (server != null)
+            {
+                try { server.close(); }
+                catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+                server = null;
+            }
 
             //Stop the thread.
-            try { this.interrupt(); }
-            catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+            if (this.isAlive())
+            {
+                try { this.interrupt(); }
+                catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+            }
 
             //Clear the list of clients.
             servers.clear();
@@ -90,7 +93,11 @@ public class ServerManager extends Thread implements IDisposable
                     final UUID uuid = GenerateUUID();
 
                     ServerClientHost serverClientHost = new ServerClientHost(socket);
-                    servers.put(uuid, serverClientHost);
+                    if (servers.putIfAbsent(uuid, serverClientHost) != null)
+                    {
+                        socket.close();
+                        onError.Invoke(new KeyValuePair<>(SERVER_UUID, new Exception("Failed to add client to list.")));
+                    }
 
                     //These may need encapsulating to maintain access to instance variables.
                     /*A new limitation has been found, I don't think java has such encapsulation
@@ -139,7 +146,8 @@ public class ServerManager extends Thread implements IDisposable
 
     private void OnClose(UUID uuid)
     {
-        servers.remove(uuid);
+        try { servers.remove(uuid); }
+        catch (NullPointerException ex) { /*Ignore as a possible race condition was met.*/ }
         onClose.Invoke(uuid);
     }
 
@@ -151,7 +159,10 @@ public class ServerManager extends Thread implements IDisposable
     //A NullPointerException can occur if the guid is not found or a race condition occurs.
     public void SendMessage(UUID uuid, Object data) throws NullPointerException
     {
-        servers.get(uuid).SendMessage(data);
+        ServerClientHost serverClientHost = servers.getOrDefault(uuid, null);
+        if (serverClientHost == null)
+            throw new NullPointerException("The client was not found.");
+        serverClientHost.SendMessage(data);
     }
 
     public void BroadcastMessage(Object data)

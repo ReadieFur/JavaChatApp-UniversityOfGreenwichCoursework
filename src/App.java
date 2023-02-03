@@ -66,24 +66,34 @@ public class App
         serverManager.onError.Add(kvp -> System.out.println("[SERVER] Error at '" + kvp.GetKey() + "': " + kvp.GetValue().getMessage()));
         serverManager.start();
 
-        Client client = new Client(initialServerAddress, port);
-        client.onConnect.Add(nul -> System.out.println("[CLIENT] Connected to server."));
-        client.onMessage.Add(message -> System.out.println("[CLIENT] Message received from server: " + message));
-        client.onClose.Add(nul -> System.out.println("[CLIENT] Disconnected from server."));
-        client.onError.Add(ex -> System.out.println("[CLIENT] Error: " + ex.getMessage()));
-        client.start();
+        Client client1 = new Client(initialServerAddress, port);
+        client1.onConnect.Add(nul -> System.out.println("[CLIENT1] Connected to server."));
+        client1.onMessage.Add(message -> System.out.println("[CLIENT1] Message received from server: " + message));
+        client1.onClose.Add(nul -> System.out.println("[CLIENT1] Disconnected from server."));
+        client1.onError.Add(ex -> System.out.println("[CLIENT1] Error: " + ex.getMessage()));
+        client1.start();
+
+        Client client2 = new Client(initialServerAddress, port);
+        client2.onConnect.Add(nul -> System.out.println("[CLIENT2] Connected to server."));
+        client2.onMessage.Add(message -> System.out.println("[CLIENT2] Message received from server: " + message));
+        client2.onClose.Add(nul -> System.out.println("[CLIENT2] Disconnected from server."));
+        client2.onError.Add(ex -> System.out.println("[CLIENT2] Error: " + ex.getMessage()));
+        client2.start();
 
         //Give the server and client a moment to connect.
         try { Thread.sleep(500); }
         catch (InterruptedException e) {}
 
         serverManager.BroadcastMessage("Hello from the server!");
-        serverManager.SendMessage(serverManager.GetClients().get(0), "Private message.");
-        client.SendMessage("Hello from the client!");
+        serverManager.SendMessage(serverManager.GetClients().get(0), "Private message to client1.");
+        client1.SendMessage("Hello from client1!");
+        // client2.SendMessage("Hello from client2!");
 
-        //Thread count should be start+3.
-        client.Dispose();
+        //Thread count should be start+4.
+        client1.Dispose();
         serverManager.Dispose();
+        //To test closure, I will not manually close the client2 socket, this should be done automatically when the server is disposed.
+        // client2.Dispose();
         //Thread count should be start+0 (program should be able to naturally exit).
 
         // //For now, wait indefinitely.

@@ -10,11 +10,15 @@ import readiefur.helpers.IDisposable;
 
 public class ServerClientHost extends Thread implements IDisposable
 {
+    private final Object lock = new Object();
     private Boolean isDisposed = false;
     private Socket socket;
+    private Boolean hasBeenConnected = false;
     //Initialized when required (I couldn't seem to figure out why it would hang if I tried to set this in the constructor).
     //I presume it may have been because the stream wasn't ready yet?
     //The reason for reusing these objects is I had read that only one object stream should be instantiated per stream, see: https://stackoverflow.com/questions/2393179/streamcorruptedexception-invalid-type-code-ac
+    //I may have now figured out why the getStream hangs, it is because it waits until the first stream is ready, i.e. waits for the first message.
+    //This is why an error can occur in the run method if the socket is closed before a message is received.
     private ObjectInputStream inputStream = null;
     private ObjectOutputStream outputStream = null;
 
@@ -31,44 +35,53 @@ public class ServerClientHost extends Thread implements IDisposable
 
     public void Dispose()
     {
-        if (isDisposed)
-            return;
-        isDisposed = true;
-
-        //Close the socket.
-        try { socket.close(); }
-        catch (Exception ex) { onError.Invoke(ex); }
-        socket = null;
-        onClose.Invoke(null);
-
-        //While GC will close the streams when this object goes out of scope, closing them manually is always more efficient.
-        try { inputStream.close(); }
-        catch (Exception ex) { onError.Invoke(ex); }
-        inputStream = null;
-
-        try { outputStream.close(); }
-        catch (Exception ex) { onError.Invoke(ex); }
-        outputStream = null;
-
-        //If the thread is still running, interrupt it.
-        try
+        //Prevent race conditions.
+        synchronized (lock)
         {
+            if (isDisposed)
+                return;
+            isDisposed = true;
+
+            //Close the socket.
+            if (socket != null)
+            {
+                try { socket.close(); }
+                catch (Exception ex) { onError.Invoke(ex); }
+                socket = null;
+
+                //If the socket was open, we can fire the onClose event.
+                if (hasBeenConnected)
+                    onClose.Invoke(null);
+            }
+
+            //While GC will close the streams when this object goes out of scope, closing them manually is always more efficient.
+            if (inputStream != null)
+            {
+                try { inputStream.close(); }
+                catch (Exception ex) { onError.Invoke(ex); }
+                inputStream = null;
+            }
+
+            if (outputStream != null)
+            {
+                try { outputStream.close(); }
+                catch (Exception ex) { onError.Invoke(ex); }
+                outputStream = null;
+            }
+
+            //If the thread is still running, interrupt it.
             if (this.isAlive())
-                this.interrupt();
+            {
+                try { this.interrupt(); }
+                catch (Exception ex) { onError.Invoke(ex); }
+            }
         }
-        catch (Exception ex) { onError.Invoke(ex); }
     }
 
     //Called immediately after construction.
     @Override
     public void run()
     {
-        if (isDisposed)
-        {
-            this.interrupt();
-            return; //I don't think this is needed if the thread interrupt is called.
-        }
-
         try
         {
             if (inputStream == null)
@@ -76,9 +89,13 @@ public class ServerClientHost extends Thread implements IDisposable
         }
         catch (Exception ex)
         {
-            onError.Invoke(ex);
+            //It is possible that we end up disposing here before receiving a message, so return early.
+            if (!isDisposed)
+                onError.Invoke(ex);
             return;
         }
+        hasBeenConnected = true;
+        //Connect event is handled externally.
 
         while (!isDisposed && !socket.isClosed())
         {
@@ -91,8 +108,10 @@ public class ServerClientHost extends Thread implements IDisposable
             }
             catch (Exception ex)
             {
+                //EOFException occurs when the SERVER disconnects (as opposed to the client closing the connection).
                 //Note how we don't check if the socket is closed here, this is because connection may have unexpectedly ended.
-                if (isDisposed || socket == null)
+                //We can safely these exceptions.
+                if (ex instanceof EOFException || isDisposed || socket == null)
                     break;
 
                 onError.Invoke(ex);
