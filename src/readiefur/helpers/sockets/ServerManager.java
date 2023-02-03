@@ -40,9 +40,39 @@ public class ServerManager extends Thread implements IDisposable
 
     public void Dispose()
     {
-        if (isDisposed)
-            return;
-        Close();
+        //Prevent race conditions.
+        synchronized (lock)
+        {
+            if (isDisposed)
+                return;
+            isDisposed = true;
+
+            /*This can be called twice if the Close method is called and the exiting thread then tries to call this method.
+             *If that happens, we can safely ignore it.*/
+            if (server == null)
+                return;
+
+            //Close all clients.
+            for (ServerClientHost serverClientHost : servers.values())
+            {
+                try { serverClientHost.Dispose(); }
+                catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+            }
+
+            //Close the server.
+            try { server.close(); }
+            catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+            server = null;
+
+            //Stop the thread.
+            try { this.interrupt(); }
+            catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+
+            //Clear the list of clients.
+            servers.clear();
+
+            onClose.Invoke(SERVER_UUID);
+        }
     }
 
     @Override
@@ -82,46 +112,16 @@ public class ServerManager extends Thread implements IDisposable
         }
         catch (IOException ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
 
-        //We do not want to dispose of the server when it fails because we may want to reuse it.
-        Close();
+        /*In my previous tests I had this close the connection and thread as opposed to disposing of the this instance.
+         *The reason I don't do this anymore is because after a quick look, I found you cannot reuse threads in java.
+         *I could work around this by creating another wrapper instance but that can be done later if needs be.
+         *I will be leaving the code for closure in the deconstructor though for good practice and if I need to reimplement it again later.*/
+        Dispose();
     }
 
     public List<UUID> GetClients()
     {
         return new ArrayList<>(servers.keySet());
-    }
-
-    private void Close()
-    {
-        //Prevent race conditions.
-        synchronized (lock)
-        {
-            /*This can be called twice if the Close method is called and the exiting thread then tries to call this method.
-             *If that happens, we can safely ignore it.*/
-            if (server == null)
-                return;
-
-            //Close all clients.
-            for (ServerClientHost serverClientHost : servers.values())
-            {
-                try { serverClientHost.Dispose(); }
-                catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
-            }
-
-            //Close the server.
-            try { server.close(); }
-            catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
-            server = null;
-
-            //Stop the thread.
-            try { this.interrupt(); }
-            catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
-
-            //Clear the list of clients.
-            servers.clear();
-
-            onClose.Invoke(SERVER_UUID);
-        }
     }
 
     private UUID GenerateUUID()

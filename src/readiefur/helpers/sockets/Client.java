@@ -29,11 +29,15 @@ public class Client extends Thread implements IDisposable
         this.port = port;
     }
 
-    private void Close()
+    public void Dispose()
     {
         //Prevent race conditions.
         synchronized (lock)
         {
+            if (isDisposed)
+                return;
+            isDisposed = true;
+
             /*This can be called twice if the Dispose method is called and the exiting thread then tries to call this method.
              *If that happens, we can safely ignore it.*/
             if (socket == null)
@@ -65,15 +69,6 @@ public class Client extends Thread implements IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        if (isDisposed)
-            return;
-        isDisposed = true;
-
-        Close();
-    }
-
     @Override
     public void run()
     {
@@ -100,8 +95,8 @@ public class Client extends Thread implements IDisposable
         catch (Exception ex)
         {
             onError.Invoke(ex);
-            Close();
-            return;
+            Dispose();
+            return; //Needed in the case of a race condition.
         }
 
         while (!isDisposed && !socket.isClosed())
@@ -119,8 +114,11 @@ public class Client extends Thread implements IDisposable
             catch (Exception ex) { onError.Invoke(ex); }
         }
 
-        //When the connection is closed, we want to reset the state rather than dispose as we may want to reuse this client.
-        Close();
+        /*In my previous tests I had this close the connection and thread as opposed to disposing of the this instance.
+         *The reason I don't do this anymore is because after a quick look, I found you cannot reuse threads in java.
+         *I could work around this by creating another wrapper instance but that can be done later if needs be.
+         *I will be leaving the code for closure in the deconstructor though for good practice and if I need to reimplement it again later.*/
+        Dispose();
     }
 
     public void SendMessage(Object message)
