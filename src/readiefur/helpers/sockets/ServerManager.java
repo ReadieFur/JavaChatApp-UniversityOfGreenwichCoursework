@@ -19,7 +19,9 @@ public class ServerManager extends Thread implements IDisposable
 {
     public static final UUID SERVER_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
+    private final Object lock = new Object();
     private int port;
+    protected Boolean isDisposed = false;
     protected ServerSocket server = null;
     protected Map<UUID, ServerClientHost> servers = new HashMap<>();
     /*I can use the final keyword here to make the instance readonly,
@@ -38,6 +40,9 @@ public class ServerManager extends Thread implements IDisposable
 
     public void Dispose()
     {
+        if (isDisposed)
+            return;
+        Close();
     }
 
     @Override
@@ -46,35 +51,77 @@ public class ServerManager extends Thread implements IDisposable
         try
         {
             server = new ServerSocket(port);
-            while (true)
+            while (!isDisposed && !server.isClosed())
             {
-                Socket socket = server.accept();
+                try
+                {
+                    Socket socket = server.accept();
 
-                final UUID uuid = GenerateUUID();
+                    final UUID uuid = GenerateUUID();
 
-                ServerClientHost serverClientHost = new ServerClientHost(socket);
-                servers.put(uuid, serverClientHost);
+                    ServerClientHost serverClientHost = new ServerClientHost(socket);
+                    servers.put(uuid, serverClientHost);
 
-                //These may need encapsulating to maintain access to instance variables.
-                /*A new limitation has been found, I don't think java has such encapsulation
-                 *and so reading a scoped variable that is not readonly causes an error.
-                 *To work around this I have made the UUID final and then created an external method that generates the UUID as required.*/
-                serverClientHost.onMessage.Add(obj -> OnMessage(uuid, obj));
-                serverClientHost.onClose.Add(nul -> OnClose(uuid));
-                serverClientHost.onError.Add(ex -> OnError(uuid, ex));
+                    //These may need encapsulating to maintain access to instance variables.
+                    /*A new limitation has been found, I don't think java has such encapsulation
+                    *and so reading a scoped variable that is not readonly causes an error.
+                    *To work around this I have made the UUID final and then created an external method that generates the UUID as required.*/
+                    serverClientHost.onMessage.Add(obj -> OnMessage(uuid, obj));
+                    serverClientHost.onClose.Add(nul -> OnClose(uuid));
+                    serverClientHost.onError.Add(ex -> OnError(uuid, ex));
 
-                onConnect.Invoke(uuid);
+                    onConnect.Invoke(uuid);
+                }
+                catch (Exception ex)
+                {
+                    if (isDisposed || server == null || server.isClosed())
+                        break;
+                    onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex));
+                }
             }
         }
-        catch (IOException ex)
-        {
-            onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex));
-        }
+        catch (IOException ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+
+        //We do not want to dispose of the server when it fails because we may want to reuse it.
+        Close();
     }
 
     public List<UUID> GetClients()
     {
         return new ArrayList<>(servers.keySet());
+    }
+
+    private void Close()
+    {
+        //Prevent race conditions.
+        synchronized (lock)
+        {
+            /*This can be called twice if the Close method is called and the exiting thread then tries to call this method.
+             *If that happens, we can safely ignore it.*/
+            if (server == null)
+                return;
+
+            //Close all clients.
+            for (ServerClientHost serverClientHost : servers.values())
+            {
+                try { serverClientHost.Dispose(); }
+                catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+            }
+
+            //Close the server.
+            try { server.close(); }
+            catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+            server = null;
+
+            //Stop the thread.
+            try { this.interrupt(); }
+            catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+
+            //Clear the list of clients.
+            servers.clear();
+
+            onClose.Invoke(SERVER_UUID);
+        }
     }
 
     private UUID GenerateUUID()

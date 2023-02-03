@@ -29,7 +29,6 @@ public class ServerClientHost extends Thread implements IDisposable
         start();
     }
 
-    //TODO: Needs fixing.
     public void Dispose()
     {
         if (isDisposed)
@@ -41,6 +40,15 @@ public class ServerClientHost extends Thread implements IDisposable
         catch (Exception ex) { onError.Invoke(ex); }
         socket = null;
         onClose.Invoke(null);
+
+        //While GC will close the streams when this object goes out of scope, closing them manually is always more efficient.
+        try { inputStream.close(); }
+        catch (Exception ex) { onError.Invoke(ex); }
+        inputStream = null;
+
+        try { outputStream.close(); }
+        catch (Exception ex) { onError.Invoke(ex); }
+        outputStream = null;
 
         //If the thread is still running, interrupt it.
         try
@@ -83,6 +91,10 @@ public class ServerClientHost extends Thread implements IDisposable
             }
             catch (Exception ex)
             {
+                //Note how we don't check if the socket is closed here, this is because connection may have unexpectedly ended.
+                if (isDisposed || socket == null)
+                    break;
+
                 onError.Invoke(ex);
                 continue;
             }
@@ -90,6 +102,7 @@ public class ServerClientHost extends Thread implements IDisposable
             onMessage.Invoke(data);
         }
 
+        //When a connection ends, we DO want to dispose of it as a socket cannot be reused.
         Dispose();
     }
 
@@ -102,11 +115,9 @@ public class ServerClientHost extends Thread implements IDisposable
         {
             if (outputStream == null)
                 outputStream = new ObjectOutputStream(socket.getOutputStream());
+
             outputStream.writeObject(data);
         }
-        catch (Exception ex)
-        {
-            onError.Invoke(ex);
-        }
+        catch (Exception ex) { onError.Invoke(ex); }
     }
 }

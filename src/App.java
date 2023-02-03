@@ -81,8 +81,10 @@ public class App
         serverManager.SendMessage(serverManager.GetClients().get(0), "Private message.");
         client.SendMessage("Hello from the client!");
 
+        //Thread count should be start+3.
         client.Dispose();
         serverManager.Dispose();
+        //Thread count should be start+0 (program should be able to naturally exit).
 
         // //For now, wait indefinitely.
         // while (true)
