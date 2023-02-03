@@ -78,7 +78,7 @@ public class App
         catch (InterruptedException e) {}
 
         serverManager.BroadcastMessage("Hello from the server!");
-        serverManager.SendMessage("127.0.0.1", "Private message.");
+        serverManager.SendMessage(serverManager.GetClients().get(0), "Private message.");
         client.SendMessage("Hello from the client!");
 
         // client.Dispose();

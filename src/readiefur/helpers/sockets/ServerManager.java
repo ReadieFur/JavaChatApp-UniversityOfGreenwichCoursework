@@ -3,8 +3,11 @@ package readiefur.helpers.sockets;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import readiefur.helpers.Event;
 import readiefur.helpers.KeyValuePair;
@@ -13,15 +16,19 @@ import readiefur.helpers.KeyValuePair;
 //TODO: Add a dispose method.
 public class ServerManager extends Thread
 {
-    //#region Instance
+    public static final UUID SERVER_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
+
     private int port;
-    private ServerSocket server = null;
-    private Map<String, ServerClientHost> servers = new HashMap<>();
-    //TODO: Accessability modifiers.
-    public Event<String> onConnect = new Event<>();
-    public Event<KeyValuePair<String, Object>> onMessage = new Event<>();
-    public Event<String> onClose = new Event<>();
-    public Event<KeyValuePair<String, Exception>> onError = new Event<>();
+    protected ServerSocket server = null;
+    protected Map<UUID, ServerClientHost> servers = new HashMap<>();
+    /*I can use the final keyword here to make the instance readonly,
+     *The only reason I wouldn't like to do this is inherited classes wouldn't be able to override this I don't believe.*/
+    /*You will also notice that I haven't fully capitalized these variables as while they are "constant",
+     *(not a primitive, known, type at compile time so they're not really), I am using it as a readonly modifier.*/
+    public final Event<UUID> onConnect = new Event<>();
+    public final Event<KeyValuePair<UUID, Object>> onMessage = new Event<>();
+    public final Event<UUID> onClose = new Event<>();
+    public final Event<KeyValuePair<UUID, Exception>> onError = new Event<>();
 
     public ServerManager(int port)
     {
@@ -37,42 +44,61 @@ public class ServerManager extends Thread
             while (true)
             {
                 Socket socket = server.accept();
-                //Use IP for now but use a GUID later.
-                String guid = socket.getInetAddress().getHostAddress();
+
+                final UUID uuid = GenerateUUID();
+
                 ServerClientHost serverClientHost = new ServerClientHost(socket);
-                servers.put(guid, serverClientHost);
-                serverClientHost.onMessage.Add(obj -> OnMessage(guid, obj)); //This may need encapsulating to maintain access to instance variables.
-                serverClientHost.onClose.Add(nul -> OnClose(guid));
-                serverClientHost.onError.Add(ex -> OnError(guid, ex));
-                onConnect.Invoke(guid);
+                servers.put(uuid, serverClientHost);
+
+                //These may need encapsulating to maintain access to instance variables.
+                /*A new limitation has been found, I don't think java has such encapsulation
+                 *and so reading a scoped variable that is not readonly causes an error.
+                 *To work around this I have made the UUID final and then created an external method that generates the UUID as required.*/
+                serverClientHost.onMessage.Add(obj -> OnMessage(uuid, obj));
+                serverClientHost.onClose.Add(nul -> OnClose(uuid));
+                serverClientHost.onError.Add(ex -> OnError(uuid, ex));
+
+                onConnect.Invoke(uuid);
             }
         }
         catch (IOException ex)
         {
-            //TODO: Handle this better.
-            onError.Invoke(new KeyValuePair<>("-1", ex));
+            onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex));
         }
     }
 
-    private void OnMessage(String guid, Object data)
+    public List<UUID> GetClients()
     {
-        onMessage.Invoke(new KeyValuePair<>(guid, data));
+        return new ArrayList<>(servers.keySet());
     }
 
-    private void OnClose(String guid)
+    private UUID GenerateUUID()
     {
-        servers.remove(guid);
+        UUID uuid;
+        do { uuid = UUID.randomUUID(); }
+        while (servers.containsKey(uuid));
+        return uuid;
     }
 
-    private void OnError(String guid, Exception ex)
+    private void OnMessage(UUID uuid, Object data)
     {
-        onError.Invoke(new KeyValuePair<>(guid, ex));
+        onMessage.Invoke(new KeyValuePair<>(uuid, data));
+    }
+
+    private void OnClose(UUID uuid)
+    {
+        servers.remove(uuid);
+    }
+
+    private void OnError(UUID uuid, Exception ex)
+    {
+        onError.Invoke(new KeyValuePair<>(uuid, ex));
     }
 
     //A NullPointerException can occur if the guid is not found or a race condition occurs.
-    public void SendMessage(String guid, Object data) throws NullPointerException
+    public void SendMessage(UUID uuid, Object data) throws NullPointerException
     {
-        servers.get(guid).SendMessage(data);
+        servers.get(uuid).SendMessage(data);
     }
 
     public void BroadcastMessage(Object data)
@@ -80,5 +106,4 @@ public class ServerManager extends Thread
         for (ServerClientHost serverClientHost : servers.values())
             serverClientHost.SendMessage(data);
     }
-    //#endregion
 }
