@@ -1,165 +1,33 @@
 package readiefur.helpers.sockets;
 
-import java.io.EOFException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.net.SocketException;
 
-import readiefur.helpers.Event;
-import readiefur.helpers.IDisposable;
-
-public class Client extends Thread implements IDisposable
+public class Client extends ASocket
 {
-    private final Object lock = new Object();
-    private Boolean isDisposed = false;
     private String address;
     private int port;
-    private Socket socket = null;
-    private Boolean hasBeenConnected = false;
-    private ObjectInputStream inputStream = null;
-    private ObjectOutputStream outputStream = null;
-
-    public final Event<Void> onConnect = new Event<>();
-    public final Event<Object> onMessage = new Event<>();
-    public final Event<Void> onClose = new Event<>();
-    public final Event<Exception> onError = new Event<>();
 
     public Client(String address, int port)
     {
+        super(null); //We initialize the socket to null as we will be creating it in the thread. While this isn't great practice, we are fortunate enough that the virtual methods have no critical uses for this variable being initialized (that is before we start the thread method which we will override).
         this.address = address;
         this.port = port;
-    }
-
-    public void Dispose()
-    {
-        //Prevent race conditions.
-        synchronized (lock)
-        {
-            if (isDisposed)
-                return;
-            isDisposed = true;
-
-            //Close the socket.
-            if (socket != null)
-            {
-                try { socket.close(); }
-                catch (Exception ex) { onError.Invoke(ex); }
-                socket = null;
-
-                //If the socket was open, we can fire the onClose event.
-                if (hasBeenConnected)
-                    onClose.Invoke(null);
-            }
-
-            //Close the streams.
-            if (inputStream != null)
-            {
-                try { inputStream.close(); }
-                catch (Exception ex) { onError.Invoke(ex); }
-                inputStream = null;
-            }
-
-            //The output stream may not have been initialized if the client never sent a message.
-            if (outputStream != null)
-            {
-                try { outputStream.close(); }
-                catch (Exception ex) { onError.Invoke(ex); }
-                outputStream = null;
-            }
-
-            //End the thread (if it's still running).
-            if (this.isAlive())
-            {
-                try { this.interrupt(); }
-                catch (Exception ex) { onError.Invoke(ex); }
-            }
-        }
-    }
-
-    public Boolean IsConnected()
-    {
-        return socket != null && socket.isConnected();
     }
 
     @Override
     public void run()
     {
-        try { socket = new Socket(address, port); }
-        catch (Exception ex)
-        {
-            //It is possible that we end up disposing here before receiving a message, so return early.
-            if (!isDisposed)
-                onError.Invoke(ex);
+        if (isDisposed)
             return;
-        }
 
-        hasBeenConnected = true;
-        onConnect.Invoke(null);
-
-        try
-        {
-            if (inputStream == null)
-                inputStream = new ObjectInputStream(socket.getInputStream());
-        }
+        try { socket = new Socket(address, port); }
         catch (Exception ex)
         {
             onError.Invoke(ex);
             Dispose();
-            return; //Needed in the case of a race condition.
         }
 
-        while (!isDisposed && !socket.isClosed())
-        {
-            try
-            {
-                Object message = inputStream.readObject();
-                onMessage.Invoke(message);
-            }
-            catch (SocketException | EOFException | NullPointerException ex)
-            {
-                //The above exceptions are expected and will be ignored, they can occur for the following reasons:
-                //SocketException: Occurs when the client disconnects.
-                //EOFException: Occurs when the SERVER disconnects (as opposed to the client closing the connection).
-                //NullPointerException: Occurs when the client disconnects.
-                break;
-            }
-            catch (Exception ex)
-            {
-                //Any other exception is unexpected and should be handled.
-                onError.Invoke(ex);
-                continue;
-            }
-        }
-
-        /*In my previous tests I had this close the connection and thread as opposed to disposing of the this instance.
-         *The reason I don't do this anymore is because after a quick look, I found you cannot reuse threads in java.
-         *I could work around this by creating another wrapper instance but that can be done later if needs be.
-         *I will be leaving the code for closure in the deconstructor though for good practice and if I need to reimplement it again later.*/
-        Dispose();
-    }
-
-    public void SendMessage(Object message)
-    {
-        if (isDisposed || socket == null || socket.isClosed())
-            return;
-
-        try
-        {
-            if (outputStream == null)
-                outputStream = new ObjectOutputStream(socket.getOutputStream());
-
-            outputStream.writeObject(message);
-        }
-        catch (SocketException | NullPointerException ex)
-        {
-            //The above exceptions are expected and will be ignored, they can occur for the following reasons:
-            //SocketException: Occurs when the client disconnects.
-            //NullPointerException: Occurs when the client disconnects.
-        }
-        catch (Exception ex)
-        {
-            onError.Invoke(ex);
-        }
+        if (socket != null)
+            super.run();
     }
 }

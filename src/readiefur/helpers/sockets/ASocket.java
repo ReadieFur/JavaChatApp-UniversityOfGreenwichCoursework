@@ -16,6 +16,8 @@ public abstract class ASocket extends Thread implements IDisposable
     protected Boolean isDisposed = false;
     protected Socket socket;
     protected Boolean threadHasRun = false;
+    //The two following object streams are initialized when required, this is because they would hang until the first message was received.
+    //I also store them globally as opposed to creating a new one each time, as I read that only one object stream should be instantiated per stream, see: https://stackoverflow.com/questions/2393179/streamcorruptedexception-invalid-type-code-ac
     protected ObjectInputStream inputStream = null;
     protected ObjectOutputStream outputStream = null;
 
