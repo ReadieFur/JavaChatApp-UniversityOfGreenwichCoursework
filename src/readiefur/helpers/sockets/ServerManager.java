@@ -96,6 +96,9 @@ public class ServerManager extends Thread implements IDisposable
                         onError.Invoke(new KeyValuePair<>(SERVER_UUID, new Exception("Failed to add client to list.")));
                     }
 
+                    //We manually fire this event as the constructor for the ServerClientHost class starts the thread immediately and so the registration of the event could be missed.
+                    onConnect.Invoke(uuid);
+
                     //These may need encapsulating to maintain access to instance variables.
                     /*A new limitation has been found, I don't think java has such encapsulation
                     *and so reading a scoped variable that is not readonly causes an error.
@@ -103,8 +106,6 @@ public class ServerManager extends Thread implements IDisposable
                     serverClientHost.onMessage.Add(obj -> OnMessage(uuid, obj));
                     serverClientHost.onClose.Add(nul -> OnClose(uuid));
                     serverClientHost.onError.Add(ex -> OnError(uuid, ex));
-
-                    onConnect.Invoke(uuid);
                 }
                 catch (Exception ex)
                 {
