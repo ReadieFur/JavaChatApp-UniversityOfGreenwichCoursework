@@ -123,9 +123,14 @@ public class ServerManager extends Thread implements IDisposable
         Dispose();
     }
 
-    public List<UUID> GetClients()
+    public Boolean IsDisposed()
     {
-        return new ArrayList<>(servers.keySet());
+        return isDisposed;
+    }
+
+    public ConcurrentHashMap<UUID, ServerClientHost> GetClientHosts()
+    {
+        return servers;
     }
 
     private UUID GenerateUUID()
@@ -166,5 +171,14 @@ public class ServerManager extends Thread implements IDisposable
     {
         for (ServerClientHost serverClientHost : servers.values())
             serverClientHost.SendMessage(data);
+    }
+
+    public void DisconnectClient(UUID uuid) throws NullPointerException
+    {
+        ServerClientHost serverClientHost = servers.getOrDefault(uuid, null);
+        if (serverClientHost == null)
+            throw new NullPointerException("The client was not found.");
+        serverClientHost.Dispose();
+        //The client will be removed from the servers dictionary in the OnClose method.
     }
 }

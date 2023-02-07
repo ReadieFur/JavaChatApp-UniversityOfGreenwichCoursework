@@ -4,6 +4,7 @@ import java.io.EOFException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 
 import readiefur.helpers.Event;
 import readiefur.helpers.IDisposable;
@@ -58,6 +59,7 @@ public class ServerClientHost extends Thread implements IDisposable
             if (inputStream != null)
             {
                 try { inputStream.close(); }
+                catch (SocketException ex) { /*Ignore, this is expected when the client disconnects.*/ }
                 catch (Exception ex) { onError.Invoke(ex); }
                 inputStream = null;
             }
@@ -65,6 +67,7 @@ public class ServerClientHost extends Thread implements IDisposable
             if (outputStream != null)
             {
                 try { outputStream.close(); }
+                catch (SocketException ex) { /*Ignore, this is expected when the client disconnects.*/ }
                 catch (Exception ex) { onError.Invoke(ex); }
                 outputStream = null;
             }
@@ -87,12 +90,14 @@ public class ServerClientHost extends Thread implements IDisposable
             if (inputStream == null)
                 inputStream = new ObjectInputStream(socket.getInputStream());
         }
+        catch (EOFException ex) { /*Can occur when the client disconnects quickly after joining.*/ }
         catch (Exception ex)
         {
             //It is possible that we end up disposing here before receiving a message, so return early.
-            if (!isDisposed)
-                onError.Invoke(ex);
-            return;
+            if (isDisposed)
+                return;
+
+            onError.Invoke(ex);
         }
         hasBeenConnected = true;
         //Connect event is handled externally.
@@ -101,19 +106,17 @@ public class ServerClientHost extends Thread implements IDisposable
         {
             Object data;
             try { data = inputStream.readObject(); }
-            catch (EOFException ex)
+            catch (SocketException | EOFException | NullPointerException ex)
             {
-                //Occurs when the CLIENT disconnects (as opposed to the server closing the connection).
+                //The above exceptions are expected and will be ignored, they can occur for the following reasons:
+                //SocketException: Occurs when the client disconnects.
+                //EOFException: Occurs when the SERVER disconnects (as opposed to the client closing the connection).
+                //NullPointerException: Occurs when the client disconnects.
                 break;
             }
             catch (Exception ex)
             {
-                //EOFException occurs when the SERVER disconnects (as opposed to the client closing the connection).
-                //Note how we don't check if the socket is closed here, this is because connection may have unexpectedly ended.
-                //We can safely these exceptions.
-                if (ex instanceof EOFException || isDisposed || socket == null)
-                    break;
-
+                //Any other exception is unexpected and should be handled.
                 onError.Invoke(ex);
                 continue;
             }
@@ -123,6 +126,11 @@ public class ServerClientHost extends Thread implements IDisposable
 
         //When a connection ends, we DO want to dispose of it as a socket cannot be reused.
         Dispose();
+    }
+
+    public Socket GetSocket()
+    {
+        return socket;
     }
 
     public void SendMessage(Object data)
@@ -137,6 +145,15 @@ public class ServerClientHost extends Thread implements IDisposable
 
             outputStream.writeObject(data);
         }
-        catch (Exception ex) { onError.Invoke(ex); }
+        catch (SocketException | NullPointerException ex)
+        {
+            //The above exceptions are expected and will be ignored, they can occur for the following reasons:
+            //SocketException: Occurs when the client disconnects.
+            //NullPointerException: Occurs when the client disconnects.
+        }
+        catch (Exception ex)
+        {
+            onError.Invoke(ex);
+        }
     }
 }

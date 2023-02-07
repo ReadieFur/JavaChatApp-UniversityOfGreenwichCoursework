@@ -38,9 +38,10 @@ public class ManualResetEvent
         }
     }
 
-    public void WaitOne() throws TimeoutException
+    public void WaitOne()
     {
-        WaitOneInternal(-1);
+        try { WaitOneInternal(-1); }
+        catch (TimeoutException e) { /*Will not occur for this call.*/ }
     }
 
     //Throws InterruptedException if the timeout occurs.
@@ -71,7 +72,8 @@ public class ManualResetEvent
                 }
                 catch (InterruptedException e)
                 {
-                    //I should do a check here to see if we were interrupted by a notification but it should be ok without for now.
+                    if (isSet)
+                        return;
                 }
             }
         }

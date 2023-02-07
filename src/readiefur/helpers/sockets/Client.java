@@ -4,6 +4,7 @@ import java.io.EOFException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 
 import readiefur.helpers.Event;
 import readiefur.helpers.IDisposable;
@@ -19,10 +20,10 @@ public class Client extends Thread implements IDisposable
     private ObjectInputStream inputStream = null;
     private ObjectOutputStream outputStream = null;
 
-    public Event<Void> onConnect = new Event<>();
-    public Event<Object> onMessage = new Event<>();
-    public Event<Void> onClose = new Event<>();
-    public Event<Exception> onError = new Event<>();
+    public final Event<Void> onConnect = new Event<>();
+    public final Event<Object> onMessage = new Event<>();
+    public final Event<Void> onClose = new Event<>();
+    public final Event<Exception> onError = new Event<>();
 
     public Client(String address, int port)
     {
@@ -115,15 +116,19 @@ public class Client extends Thread implements IDisposable
                 Object message = inputStream.readObject();
                 onMessage.Invoke(message);
             }
+            catch (SocketException | EOFException | NullPointerException ex)
+            {
+                //The above exceptions are expected and will be ignored, they can occur for the following reasons:
+                //SocketException: Occurs when the client disconnects.
+                //EOFException: Occurs when the SERVER disconnects (as opposed to the client closing the connection).
+                //NullPointerException: Occurs when the client disconnects.
+                break;
+            }
             catch (Exception ex)
             {
-                //EOFException occurs when the SERVER disconnects (as opposed to the client closing the connection).
-                //Note how we don't check if the socket is closed here, this is because connection may have unexpectedly ended.
-                //We can safely these exceptions.
-                if (ex instanceof EOFException || isDisposed || socket == null)
-                    break;
-
+                //Any other exception is unexpected and should be handled.
                 onError.Invoke(ex);
+                continue;
             }
         }
 
@@ -146,6 +151,15 @@ public class Client extends Thread implements IDisposable
 
             outputStream.writeObject(message);
         }
-        catch (Exception ex) { onError.Invoke(ex); }
+        catch (SocketException | NullPointerException ex)
+        {
+            //The above exceptions are expected and will be ignored, they can occur for the following reasons:
+            //SocketException: Occurs when the client disconnects.
+            //NullPointerException: Occurs when the client disconnects.
+        }
+        catch (Exception ex)
+        {
+            onError.Invoke(ex);
+        }
     }
 }

@@ -1,17 +1,10 @@
 import java.util.Scanner;
-import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
-import readiefur.helpers.ManualResetEvent;
-import readiefur.helpers.sockets.Client;
-import readiefur.helpers.sockets.ServerManager;
+import chat_app.ChatManager;
 
 public class App
 {
-    private static Boolean isHost = false;
-    private static String serverIPAddress;
-    private static int port;
-
     public static void main(String[] args)
     {
         //#region Parse command line arguments
@@ -71,47 +64,6 @@ public class App
         }
         //#endregion
 
-        serverIPAddress = initialServerAddress;
-        App.port = port;
-
-        Begin();
-    }
-
-    private static Boolean FindHost(String ipAddress, int port)
-    {
-        ManualResetEvent resetEvent = new ManualResetEvent(false);
-
-        Client client = new Client(ipAddress, port);
-        client.onConnect.Add(nul -> resetEvent.Set());
-        client.start();
-
-        try { resetEvent.WaitOne(1000); }
-        catch (TimeoutException e) {}
-
-        Boolean hostFound = client.IsConnected();
-
-        client.Dispose();
-
-        return hostFound;
-    }
-
-    private static void Begin()
-    {
-        //Look for a host.
-        isHost = !FindHost(serverIPAddress, port);
-
-        //If a host was not found, begin hosting.
-        if (isHost)
-        {
-            //Start the server.
-            ServerManager serverManager = new ServerManager(port);
-            serverManager.start();
-        }
-        else
-        {
-            //Connect to the server.
-            Client client = new Client(serverIPAddress, port);
-            client.start();
-        }
+        ChatManager.Begin(initialServerAddress, port);
     }
 }
