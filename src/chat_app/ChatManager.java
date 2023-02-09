@@ -59,15 +59,21 @@ public class ChatManager
         ChatManager.port = port;
         ChatManager.desiredUsername = desiredUsername; //If null, will be resolved to "Anonymous" later on.
 
-        //Start the console input thread.
-
         //Start the manager.
         Restart();
+
+        //Start the console input thread.
+        ConsoleInputThread consoleInputThread = ConsoleInputThread.GetInstance();
+        consoleInputThread.onInput.Add(ChatManager::OnConsoleInput);
 
         //Wait indefinitely until signaled to exit.
         exitEvent.WaitOne();
 
+        consoleInputThread.Dispose();
         Cleanup();
+
+        //[TEMPORARY] Please read "ConsoleInputManagerThread.java:51".
+        System.exit(0);
     }
 
     private static void Cleanup()
@@ -382,6 +388,33 @@ public class ChatManager
     //#endregion
 
     //#region User interactive
+    private static void OnConsoleInput(String data)
+    {
+        String[] splitData = data.split(" ");
+
+        if (splitData.length == 0)
+            return;
+
+        switch (splitData[0].toLowerCase())
+        {
+            case "help":
+            {
+                Help();
+                break;
+            }
+            case "exit":
+            {
+                Exit();
+                break;
+            }
+            default:
+            {
+                ConsoleWrapper.SyncWriteLine("Unknown command. Type 'help' for a list of commands.");
+                break;
+            }
+        }
+    }
+
     @CommandAttribute(description = "Prints a list of available commands.", availableInMode = 0)
     private static void Help()
     {
@@ -417,6 +450,12 @@ public class ChatManager
         }
 
         ConsoleWrapper.SyncWriteLine(helpMessage);
+    }
+
+    @CommandAttribute(description = "Exits the application.", availableInMode = 0)
+    private static void Exit()
+    {
+        exitEvent.Set();
     }
     //#endregion
 }

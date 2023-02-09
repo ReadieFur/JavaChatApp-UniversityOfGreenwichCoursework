@@ -66,25 +66,6 @@ public class ConsoleWrapper
         }
     }
 
-    public static String ReadLine()
-    {
-        synchronized (lock)
-        {
-            // ClearInputBuffer();
-            return stdIn.nextLine();
-        }
-    }
-
-    public static String ReadLine(String prompt)
-    {
-        synchronized (lock)
-        {
-            // ClearInputBuffer();
-            System.out.print(prompt);
-            return stdIn.nextLine();
-        }
-    }
-
     public static String Read()
     {
         synchronized (lock)
@@ -104,11 +85,30 @@ public class ConsoleWrapper
         }
     }
 
-    private static void ClearInputBuffer()
+    public static String ReadLine()
     {
-        // while (stdIn.hasNext())
-        //     stdIn.next();
+        synchronized (lock)
+        {
+            // ClearInputBuffer();
+            return stdIn.nextLine();
+        }
     }
+
+    public static String ReadLine(String prompt)
+    {
+        synchronized (lock)
+        {
+            // ClearInputBuffer();
+            System.out.print(prompt);
+            return stdIn.nextLine();
+        }
+    }
+
+    // private static void ClearInputBuffer()
+    // {
+    //     while (stdIn.hasNext())
+    //         stdIn.next();
+    // }
 
     private ConsoleWrapper() {}
 }
