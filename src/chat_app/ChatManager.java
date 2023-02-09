@@ -24,8 +24,10 @@ public class ChatManager
 {
     private static final ManualResetEvent exitEvent = new ManualResetEvent(false);
 
+    //"Constant" properties (doesn't change between calling Restart()).
     private static String fallbackServerIPAddress;
     private static int port;
+    private static String desiredUsername;
 
     //Server specific properties.
     private static ServerManager serverManager = null;
@@ -43,11 +45,15 @@ public class ChatManager
     private ChatManager() {}
 
     //This is a blocking method that will not return until the application is closed.
-    public static void Begin(String initialServerAddress, int port)
+    public static void Begin(String initialServerAddress, int port, String desiredUsername)
     {
         fallbackServerIPAddress = initialServerAddress;
         ChatManager.port = port;
+        ChatManager.desiredUsername = desiredUsername; //If null, will be resolved to "Anonymous" later on.
 
+        //Start the console input thread.
+
+        //Start the manager.
         Restart();
 
         //Wait indefinitely until signaled to exit.
@@ -202,7 +208,7 @@ public class ChatManager
             NetMessage<Peer> message = new NetMessage<>();
             message.type = EType.HANDSHAKE;
             //TODO: Client username.
-            message.payload = new Peer("Test");
+            message.payload = new Peer(desiredUsername);
             client.SendMessage(message);
         }
     }
@@ -220,7 +226,7 @@ public class ChatManager
                 {
                     Peer inPayload = (Peer)netMessage.payload;
 
-                    String nickname = inPayload.nickname == null || inPayload.nickname.isEmpty() ? "Anonymous" : inPayload.nickname;
+                    String nickname = inPayload.nickname == null || inPayload.nickname.isBlank() ? "Anonymous" : inPayload.nickname;
                     int duplicateCount = 0;
 
                     //Check for duplicate nicknames.

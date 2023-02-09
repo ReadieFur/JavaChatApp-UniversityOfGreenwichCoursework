@@ -17,6 +17,10 @@ public class Client extends ASocket
     @Override
     public void run()
     {
+        //Try to set the thread name to the class name, not required but useful for debugging.
+        try { setName(getClass().getSimpleName()); }
+        catch (Exception e) {}
+
         if (isDisposed)
             return;
 

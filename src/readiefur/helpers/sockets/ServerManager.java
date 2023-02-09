@@ -77,6 +77,10 @@ public class ServerManager extends Thread implements IDisposable
     @Override
     public void run()
     {
+        //Try to set the thread name to the class name, not required but useful for debugging.
+        try { setName(getClass().getSimpleName()); }
+        catch (Exception e) {}
+
         try
         {
             server = new ServerSocket(port);
@@ -88,7 +92,8 @@ public class ServerManager extends Thread implements IDisposable
 
                     final UUID uuid = GenerateUUID();
 
-                    ServerClientHost serverClientHost = new ServerClientHost(socket);
+                    ServerClientHost serverClientHost = new ServerClientHost(socket, uuid);
+
                     if (servers.putIfAbsent(uuid, serverClientHost) != null)
                     {
                         socket.close();

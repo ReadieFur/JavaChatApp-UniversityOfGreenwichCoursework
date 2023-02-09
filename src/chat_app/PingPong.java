@@ -27,6 +27,10 @@ public class PingPong extends Thread
     @Override
     public void run()
     {
+        //Try to set the thread name to the class name, not required but useful for debugging.
+        try { setName(getClass().getSimpleName()); }
+        catch (Exception e) {}
+
         while (true)
         {
             try
