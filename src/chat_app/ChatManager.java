@@ -59,7 +59,7 @@ public class ChatManager
     {
         fallbackServerIPAddress = initialServerAddress;
         ChatManager.port = port;
-        ChatManager.desiredUsername = desiredUsername; //If null, will be resolved to "Anonymous" later on.
+        ChatManager.desiredUsername = desiredUsername == null || desiredUsername.isBlank() ? "Anonymous" : desiredUsername;
 
         //Start the manager.
         Restart();
@@ -162,7 +162,7 @@ public class ChatManager
                 ServerPeer serverPeer = new ServerPeer(
                     ServerManager.SERVER_UUID,
                     Inet4Address.getLocalHost().getHostAddress(),
-                    desiredUsername == null ? "Anonymous" : desiredUsername);
+                    desiredUsername);
                 serverPeer.SetStatus(EPeerStatus.CONNECTED);
                 peers.put(ServerManager.SERVER_UUID, serverPeer);
                 id = ServerManager.SERVER_UUID;
@@ -250,7 +250,7 @@ public class ChatManager
 
                     Peer inPayload = (Peer)netMessage.payload;
 
-                    String nickname = inPayload.nickname == null || inPayload.nickname.isBlank() ? "Anonymous" : inPayload.nickname;
+                    String nickname = inPayload.nickname;
                     int duplicateCount = 0;
 
                     //Check for duplicate nicknames.
@@ -435,12 +435,12 @@ public class ChatManager
                 Restart();
                 return;
             }
-            System.out.println("[SERVER | ERROR] " + error.GetValue().getMessage());
         }
         else
         {
-            System.out.println("[CLIENT | ERROR] " + error.GetValue().getMessage());
         }
+
+        System.err.println(error.GetValue().getMessage());
     }
 
     private static Collection<Peer> GetReadyPeers()
@@ -567,7 +567,7 @@ public class ChatManager
         String peersMessage = "Available peers:";
         for (Peer peer : peers)
         {
-            peersMessage = "\n\t";
+            peersMessage += "\n\t";
 
             if (peer.GetUUID().equals(id))
                 peersMessage += "[You] ";
