@@ -1,5 +1,6 @@
 package chat_app;
 
+import java.net.BindException;
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -23,7 +24,7 @@ public class ChatManager
 {
     private static ManualResetEvent exitEvent = new ManualResetEvent(false);
 
-    //The port however will never change.
+    private static String fallbackServerIPAddress;
     private static int port;
 
     //Server specific properties.
@@ -35,7 +36,7 @@ public class ChatManager
     private static UUID clientID = null;
 
     //Shared properties.
-    private static Boolean isHost = false;
+    private static Boolean isHost = true;
     private static ConcurrentHashMap<UUID, Peer> peers = new ConcurrentHashMap<>();
 
     //Hide the constructor.
@@ -44,9 +45,10 @@ public class ChatManager
     //This is a blocking method that will not return until the application is closed.
     public static void Begin(String initialServerAddress, int port)
     {
+        fallbackServerIPAddress = initialServerAddress;
         ChatManager.port = port;
 
-        Restart(initialServerAddress);
+        Restart();
 
         //Wait indefinitely until signaled to exit.
         exitEvent.WaitOne();
@@ -56,35 +58,58 @@ public class ChatManager
 
     private static void Cleanup()
     {
+        //Server related.
         if (serverManager != null)
         {
             serverManager.Dispose();
             serverManager = null;
-
+        }
+        if (pingPong != null)
+        {
             pingPong.interrupt();
             pingPong = null;
         }
+
+        //Client related.
         if (client != null)
         {
             client.Dispose();
             client = null;
-
-            clientID = null;
         }
+        clientID = null;
 
+        //Shared.
         peers.clear();
     }
 
-    private static void Restart(String fallbackServerIPAddress)
+    private static void Restart()
     {
+        UUID oldClientID = clientID;
         List<Peer> oldPeers = new ArrayList<>(peers.values());
 
         Cleanup();
 
+        /*Add some random time between 0 and 1000ms, this is to help prevent two servers trying to be created at the same time.
+         *While I do catch this issue if the server and client are on the same machine, if they are not then it is possible that,
+         *Two servers get made and the clients are split across servers which is not desirable.*/
+        /*In the future I think I would like to have this delay be based on the connection index (or GUID).
+         *Or if the server had a clean exit, tell which clients who will be the next host.*/
+        //We can skip this wait of the peersList was empty.
+        if (oldPeers.isEmpty())
+        {
+            try { Thread.sleep((long)(Math.random() * 1000)); }
+            catch (InterruptedException e) {}
+        }
+
         String hostAddress = null;
+        //Look for a host.
         for (Peer peer : oldPeers)
         {
-            //Look for a host.
+            UUID peerUUID = peer.GetUUID();
+            if (peerUUID == ServerManager.INVALID_UUID //We don't include the server ID as a check as we may have accidentally lost connection.
+                || (oldClientID != null && peerUUID == oldClientID)) //We don't check ourself.
+                continue;
+
             String peerAddress = peer.GetIPAddress();
             if (FindHost(hostAddress, port))
             {
@@ -245,7 +270,7 @@ public class ChatManager
                 default:
                 {
                     //Invalid message type, ignore the request.
-                    return;
+                    break;
                 }
             }
         }
@@ -291,7 +316,7 @@ public class ChatManager
                 default:
                 {
                     //Invalid message type, ignore the request.
-                    return;
+                    break;
                 }
             }
         }
@@ -301,6 +326,11 @@ public class ChatManager
     {
         if (isHost)
         {
+            //Server has closed, handled in OnNetError.
+            if (uuid == ServerManager.SERVER_UUID)
+                return;
+
+            //Client has disconnected.
             if (peers.get(uuid).GetIsReady())
                 System.out.println("[SERVER] Client disconnected: " + uuid + "");
             peers.remove(uuid);
@@ -308,19 +338,26 @@ public class ChatManager
         else
         {
             System.out.println("[CLIENT] Disconnected from server.");
-            // Restart(null);
+            Restart();
         }
     }
 
     private static void OnNetError(KeyValuePair<UUID, Exception> error)
     {
-        System.out.println("[ERROR] " + error.GetValue().getMessage());
-
         if (isHost)
         {
+            if (error.GetValue() instanceof BindException)
+            {
+                /*A bind error can occur when another server is already running on the same port
+                 *if this happens, assume another server instance is running.*/
+                Restart();
+                return;
+            }
+            System.out.println("[SERVER | ERROR] " + error.GetValue().getMessage());
         }
         else
         {
+            System.out.println("[CLIENT | ERROR] " + error.GetValue().getMessage());
         }
     }
 
