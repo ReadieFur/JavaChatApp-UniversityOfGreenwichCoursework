@@ -1,5 +1,6 @@
 package chat_app;
 
+import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
@@ -11,17 +12,22 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import chat_app.attributes.CommandAttribute;
+import chat_app.attributes.CommandParameterAttribute;
+import chat_app.attributes.CommandParameterAttributes;
 import chat_app.net_data.EType;
 import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import chat_app.net_data.PeersPayload;
 import readiefur.helpers.KeyValuePair;
 import readiefur.helpers.ManualResetEvent;
+import readiefur.helpers.console.ConsoleWrapper;
 import readiefur.helpers.sockets.Client;
 import readiefur.helpers.sockets.ServerManager;
 
 public class ChatManager
 {
+    //#region Properties
     private static final ManualResetEvent exitEvent = new ManualResetEvent(false);
 
     //"Constant" properties (doesn't change between calling Restart()).
@@ -40,7 +46,9 @@ public class ChatManager
     //Shared properties.
     private static Boolean isHost = true;
     private static ConcurrentHashMap<UUID, Peer> peers = new ConcurrentHashMap<>();
+    //#endregion
 
+    //#region Initialization and Cleanup
     //Hide the constructor.
     private ChatManager() {}
 
@@ -87,7 +95,9 @@ public class ChatManager
         //Shared.
         peers.clear();
     }
+    //#endregion
 
+    //#region Setup methods
     private static void Restart()
     {
         UUID oldClientID = clientID;
@@ -188,7 +198,9 @@ public class ChatManager
 
         return hostFound;
     }
+    //#endregion
 
+    //#region Network Events
     //UUIDs are null for client connections.
     private static void OnNetConnect(UUID uuid)
     {
@@ -367,4 +379,44 @@ public class ChatManager
     {
         return peers.values().stream().filter(Peer::GetIsReady).collect(Collectors.toList());
     }
+    //#endregion
+
+    //#region User interactive
+    @CommandAttribute(description = "Prints a list of available commands.", availableInMode = 0)
+    private static void Help()
+    {
+        //This method is modeled after my C# implementation of this attribute based command system: https://github.com/ReadieFur/CreateProcessAsUser/blob/fd80746a175c52bd64edc40a5c1e590c65c171d5/src/CreateProcessAsUser.Service/UserInteractive.cs#L387-L401
+
+        String helpMessage = "Command usage: [Command] <Parameter...>";
+
+        //Reflect on this method and get all of the commands.
+        for (Method method : ChatManager.class.getDeclaredMethods())
+        {
+            CommandAttribute commandAttribute = method.getAnnotation(CommandAttribute.class);
+            if (commandAttribute == null)
+                continue;
+
+            helpMessage += "\n\t" + method.getName();
+
+            if (commandAttribute.description() != null && !commandAttribute.description().isBlank())
+                helpMessage += "\n\t\t" + commandAttribute.description();
+
+            //Get the parameters of the method.
+            CommandParameterAttributes parameters = method.getAnnotation(CommandParameterAttributes.class);
+            if (parameters != null)
+            {
+                for (CommandParameterAttribute parameter : parameters.value())
+                {
+                    helpMessage += "\n\t\t\t" + parameter.name();
+
+                    //The description is optional. Each newline on the description will be replaced by a new line and indentation.
+                    if (parameter.description() != null && !parameter.description().isBlank())
+                        helpMessage += "\n\t\t\t\t" + parameter.description().replace("\n", "\n\t\t\t\t");
+                }
+            }
+        }
+
+        ConsoleWrapper.SyncWriteLine(helpMessage);
+    }
+    //#endregion
 }
