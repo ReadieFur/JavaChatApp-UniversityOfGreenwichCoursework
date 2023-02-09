@@ -22,7 +22,7 @@ import readiefur.helpers.sockets.ServerManager;
 
 public class ChatManager
 {
-    private static ManualResetEvent exitEvent = new ManualResetEvent(false);
+    private static final ManualResetEvent exitEvent = new ManualResetEvent(false);
 
     private static String fallbackServerIPAddress;
     private static int port;

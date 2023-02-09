@@ -2,11 +2,15 @@ import java.util.Scanner;
 import java.util.regex.Pattern;
 
 import chat_app.ChatManager;
+import readiefur.helpers.console.ConsoleWrapper;
 
 public class App
 {
     public static void main(String[] args)
     {
+        //Initialize the console manager.
+        ConsoleWrapper.Instantiate();
+
         //#region Parse command line arguments
         String initialServerAddress = ""; //Value required to satisfy the compiler.
         if (args.length > 0)
