@@ -1,7 +1,8 @@
-import java.util.Scanner;
 import java.util.regex.Pattern;
 
 import chat_app.ChatManager;
+import readiefur.helpers.KeyValuePair;
+import readiefur.helpers.console.ConsoleColour;
 import readiefur.helpers.console.ConsoleWrapper;
 
 public class App
@@ -10,6 +11,10 @@ public class App
     {
         //Initialize the console manager.
         ConsoleWrapper.Instantiate();
+
+        //Format stdErr.
+        ConsoleWrapper.errPreprocessor = str ->
+            new KeyValuePair<Boolean, String>(true, ConsoleColour.RED + "[ERROR] " + str + ConsoleColour.RESET);
 
         //#region Parse command line arguments
         //IP address.
@@ -21,7 +26,7 @@ public class App
             .matcher(initialServerAddress)
             .matches())
         {
-            System.out.println("Invalid IP address.");
+            System.err.println("Invalid IP address.");
             System.exit(1);
         }
 
@@ -39,13 +44,13 @@ public class App
             }
             catch (NumberFormatException e)
             {
-                System.out.println("Invalid port.");
+                System.err.println("Invalid port.");
                 System.exit(1);
             }
         }
         if (port < 0 || port > 65535)
         {
-            System.out.println("Invalid port.");
+            System.err.println("Invalid port.");
             System.exit(1);
         }
 

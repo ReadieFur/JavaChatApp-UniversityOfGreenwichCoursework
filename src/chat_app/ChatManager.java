@@ -155,8 +155,6 @@ public class ChatManager
 
             pingPong = new PingPong(serverManager);
             pingPong.start();
-
-            System.out.println("Running as server");
         }
         else
         {
@@ -170,8 +168,6 @@ public class ChatManager
             isHost = false;
 
             client.start();
-
-            System.out.println("Running as client");
         }
     }
 
