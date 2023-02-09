@@ -31,6 +31,12 @@ public enum EType
      */
     PONG,
     /**
+     * Used to send the status of a peer.
+     * <br></br>
+     * Payload: {@link PeersPayload}
+     */
+    PEER,
+    /**
      * Used to request a list of peers from the server or indicates that a payload contains a list of peers.
      * <br></br>
      * Payload: {@link EmptyPayload} or {@link PeersPayload}
