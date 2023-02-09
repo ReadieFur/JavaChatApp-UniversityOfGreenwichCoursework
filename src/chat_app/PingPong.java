@@ -4,6 +4,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import chat_app.net_data.EType;
+import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import readiefur.helpers.KeyValuePair;
 import readiefur.helpers.sockets.ServerClientHost;
@@ -11,6 +12,9 @@ import readiefur.helpers.sockets.ServerManager;
 
 public class PingPong extends Thread
 {
+    ////20 seconds seems to be the standard interval for a websocket ping/pong so I will mimic that.
+    public static final int PING_PONG_INTERVAL_MS = 10_000;
+
     private ServerManager serverManager;
     private ConcurrentHashMap<UUID, Boolean> pongedPeers = new ConcurrentHashMap<>();
 
@@ -27,7 +31,7 @@ public class PingPong extends Thread
         {
             try
             {
-                Thread.sleep(1000);
+                Thread.sleep(PING_PONG_INTERVAL_MS);
             }
             catch (Exception e) {}
             if (serverManager.IsDisposed() || !this.isAlive())
@@ -46,10 +50,7 @@ public class PingPong extends Thread
             //Reset tje pongedPeers dictionary.
             pongedPeers.clear();
             //We only want to add peers for the current frame.
-            serverManager.GetClientHosts().forEach((UUID peerID, ServerClientHost serverClientHost) ->
-            {
-                pongedPeers.put(peerID, false);
-            });
+            serverManager.GetClientHosts().forEach((UUID peerID, ServerClientHost serverClientHost) -> pongedPeers.put(peerID, false));
 
             //Send a new ping.
             NetMessage<EmptyPayload> message = new NetMessage<>();

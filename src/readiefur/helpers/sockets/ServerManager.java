@@ -3,8 +3,6 @@ package readiefur.helpers.sockets;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,6 +14,7 @@ import readiefur.helpers.KeyValuePair;
 public class ServerManager extends Thread implements IDisposable
 {
     public static final UUID SERVER_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
+    public static final UUID INVALID_UUID = UUID.fromString("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF");
 
     private final Object lock = new Object();
     private int port;
@@ -138,7 +137,7 @@ public class ServerManager extends Thread implements IDisposable
     {
         UUID uuid;
         do { uuid = UUID.randomUUID(); }
-        while (servers.containsKey(uuid));
+        while (servers.containsKey(uuid) || uuid.equals(SERVER_UUID) || uuid.equals(INVALID_UUID));
         return uuid;
     }
 

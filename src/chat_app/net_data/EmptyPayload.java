@@ -1,4 +1,4 @@
-package chat_app;
+package chat_app.net_data;
 
 import java.io.Serializable;
 

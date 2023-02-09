@@ -95,23 +95,19 @@ public abstract class ASocket extends Thread implements IDisposable
         if (socket == null)
             throw new IllegalStateException("Socket is null.");
 
-        try
-        {
-            //This should not be set yet.
-            inputStream = new ObjectInputStream(socket.getInputStream());
-
-            //If we managed to get the input stream then we can fire the onConnect event.
-            onConnect.Invoke(null);
-        }
-        catch (EOFException ex) { /*Can occur when the other end of the socket has already closed.*/ }
-        catch (Exception ex) { onError.Invoke(ex); }
-        //If either of the above exceptions occur, the following while loop will not be executed and the dispose method will be called thereafter.
+        onConnect.Invoke(null);
 
         //While the socket is open, read messages from the input stream.
         while (!isDisposed && !socket.isClosed())
         {
             try
             {
+                if (inputStream == null)
+                {
+                    //This will hang until a message is received.
+                    inputStream = new ObjectInputStream(socket.getInputStream());
+                }
+
                 Object message = inputStream.readObject();
                 onMessage.Invoke(message);
             }

@@ -3,12 +3,15 @@ package chat_app;
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import chat_app.net_data.EType;
+import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import chat_app.net_data.PeersPayload;
 import readiefur.helpers.KeyValuePair;
@@ -23,13 +26,19 @@ public class ChatManager
     //The port however will never change.
     private static int port;
 
-    private static Boolean isHost = false;
+    //Server specific properties.
     private static ServerManager serverManager = null;
-    private static Client client = null;
-
-    private static HashMap<UUID, Peer> peers = new HashMap<>();
     private static PingPong pingPong = null;
 
+    //Client specific properties.
+    private static Client client = null;
+    private static UUID clientID = null;
+
+    //Shared properties.
+    private static Boolean isHost = false;
+    private static ConcurrentHashMap<UUID, Peer> peers = new ConcurrentHashMap<>();
+
+    //Hide the constructor.
     private ChatManager() {}
 
     //This is a blocking method that will not return until the application is closed.
@@ -42,25 +51,11 @@ public class ChatManager
         //Wait indefinitely until signaled to exit.
         exitEvent.WaitOne();
 
-        //Cleanup.
-        if (isHost)
-        {
-            serverManager.Dispose();
-            serverManager = null;
-
-            pingPong.interrupt();
-            pingPong = null;
-        }
-        else
-        {
-            client.Dispose();
-            client = null;
-        }
+        Cleanup();
     }
 
-    private static void Restart(String fallbackServerIPAddress)
+    private static void Cleanup()
     {
-        //Cleanup.
         if (serverManager != null)
         {
             serverManager.Dispose();
@@ -73,10 +68,18 @@ public class ChatManager
         {
             client.Dispose();
             client = null;
+
+            clientID = null;
         }
 
-        List<Peer> oldPeers = new ArrayList<>(peers.values());
         peers.clear();
+    }
+
+    private static void Restart(String fallbackServerIPAddress)
+    {
+        List<Peer> oldPeers = new ArrayList<>(peers.values());
+
+        Cleanup();
 
         String hostAddress = null;
         for (Peer peer : oldPeers)
@@ -107,8 +110,10 @@ public class ChatManager
             isHost = true;
             try
             {
-                peers.put(ServerManager.SERVER_UUID,
-                    new Peer(ServerManager.SERVER_UUID, Inet4Address.getLocalHost().getHostAddress()));
+                Peer serverPeer = new Peer(ServerManager.SERVER_UUID, Inet4Address.getLocalHost().getHostAddress());
+                serverPeer.SetIsReady();
+                //TODO: Server username.
+                peers.put(ServerManager.SERVER_UUID, serverPeer);
             }
             catch (UnknownHostException e)
             {
@@ -119,6 +124,8 @@ public class ChatManager
 
             pingPong = new PingPong(serverManager);
             pingPong.start();
+
+            System.out.println("Running as server");
         }
         else
         {
@@ -132,6 +139,8 @@ public class ChatManager
             isHost = false;
 
             client.start();
+
+            System.out.println("Running as client");
         }
     }
 
@@ -158,61 +167,132 @@ public class ChatManager
     {
         if (isHost)
         {
-            System.out.println("[SERVER] Client connected: " + uuid + ""); //Remove this message from here once the handshake is implemented.
+            /*When a new client connects, we add them to the list of peers however we don't,
+             *indicate that the client is ready yet, we must wait for the handshake first.*/
             peers.put(uuid, new Peer(uuid, serverManager.GetClientHosts().get(uuid).GetSocket().getInetAddress().getHostAddress()));
         }
         else
         {
-            System.out.println("[CLIENT] Connected to server.");
-            //Ask the server for a list of peers.
-            NetMessage<EmptyPayload> message = new NetMessage<>();
-            message.type = EType.PEERS;
-            message.payload = new EmptyPayload();
+            //Send the handshake.
+            NetMessage<Peer> message = new NetMessage<>();
+            message.type = EType.HANDSHAKE;
+            //TODO: Client username.
+            message.payload = new Peer("Test");
             client.SendMessage(message);
         }
     }
 
-    private static void OnNetMessage(KeyValuePair<UUID, Object> message)
+    private static void OnNetMessage(KeyValuePair<UUID, Object> data)
     {
-        NetMessage<?> netMessage = (NetMessage<?>)message.GetValue();
+        NetMessage<?> netMessage = (NetMessage<?>)data.GetValue();
 
         if (isHost)
         {
             switch (netMessage.type)
             {
+                //I like to use {} on my switch case statements for two reasons, it scopes each case and it increases readability.
+                case HANDSHAKE:
+                {
+                    Peer inPayload = (Peer)netMessage.payload;
+
+                    String nickname = inPayload.nickname == null || inPayload.nickname.isEmpty() ? "Anonymous" : inPayload.nickname;
+                    int duplicateCount = 0;
+
+                    //Check for duplicate nicknames.
+                    //(This could've been done ine like 2 lines in C# but Java's inability to pass local variables makes it a bit more complicated).
+                    while (true)
+                    {
+                        boolean duplicateFound = false;
+                        for (Peer peer : peers.values())
+                        {
+                            //It seems like string == string is not the same as string.equals(string) in Java.
+                            if (peer.GetIsReady() && peer.nickname != null && peer.nickname.equals(nickname))
+                            {
+                                duplicateFound = true;
+                                break;
+                            }
+                        }
+                        if (!duplicateFound)
+                            break;
+
+                        nickname = inPayload.nickname + ++duplicateCount;
+                    }
+
+                    //Indicate that the client is ready.
+                    Peer peer = peers.get(data.GetKey());
+                    peer.nickname = nickname;
+                    peer.SetIsReady();
+
+                    System.out.println("[SERVER] Client connected: " + data.GetKey() + " (" + peer.nickname + ")");
+
+                    //Return the server-validated handshake data back to the client.
+                    NetMessage<Peer> response = new NetMessage<>();
+                    response.type = EType.HANDSHAKE;
+                    response.payload = peer;
+                    serverManager.SendMessage(data.GetKey(), response);
+                    break;
+                }
                 case PEERS:
+                {
                     //Send the list of peers to the client.
                     NetMessage<PeersPayload> response = new NetMessage<>();
                     response.type = EType.PEERS;
                     response.payload = new PeersPayload();
-                    response.payload.peers = peers.values().toArray(new Peer[peers.size()]);
-                    serverManager.SendMessage(message.GetKey(), response);
+                    response.payload.peers = GetReadyPeers().toArray(new Peer[peers.size()]);
+                    serverManager.SendMessage(data.GetKey(), response);
                     break;
+                }
                 default:
+                {
                     //Invalid message type, ignore the request.
                     return;
+                }
             }
         }
         else
         {
             switch (netMessage.type)
             {
-                case PEERS:
-                    //Update the list of peers.
-                    PeersPayload payload = (PeersPayload)netMessage.payload;
-                    for (Peer peer : payload.peers)
-                        peers.putIfAbsent(peer.GetUUID(), peer);
+                case HANDSHAKE:
+                {
+                    Peer inPayload = (Peer)netMessage.payload;
+                    clientID = inPayload.GetUUID();
+
+                    System.out.println("[CLIENT] Connected to server.");
+
+                    //Occurs when the handshake has been acknowledged by the server.
+                    //Request a list of peers.
+                    NetMessage<EmptyPayload> response = new NetMessage<>();
+                    response.type = EType.PEERS;
+                    response.payload = new EmptyPayload();
+                    client.SendMessage(response);
                     break;
+                }
                 case PING:
-                    //Send a pong response.
+                {
+                    //Occurs when the server has sent a ping request.
+                    //Return a pong.
                     NetMessage<EmptyPayload> response = new NetMessage<>();
                     response.type = EType.PONG;
                     response.payload = new EmptyPayload();
                     client.SendMessage(response);
                     break;
+                }
+                case PEERS:
+                {
+                    //Occurs when the server has sent a list of peers.
+                    //Replace the list of peers with the new list.
+                    peers.clear();
+                    for (Peer peer : ((PeersPayload)netMessage.payload).peers)
+                        if (peer != null) //In my testing it seemed like the payload would include one extra null value.
+                            peers.put(peer.GetUUID(), peer);
+                    break;
+                }
                 default:
+                {
                     //Invalid message type, ignore the request.
                     return;
+                }
             }
         }
     }
@@ -221,10 +301,8 @@ public class ChatManager
     {
         if (isHost)
         {
-            // if (!peers.containsKey(uuid))
-            //     return;
-
-            System.out.println("[SERVER] Client disconnected: " + uuid + "");
+            if (peers.get(uuid).GetIsReady())
+                System.out.println("[SERVER] Client disconnected: " + uuid + "");
             peers.remove(uuid);
         }
         else
@@ -244,5 +322,10 @@ public class ChatManager
         else
         {
         }
+    }
+
+    private static Collection<Peer> GetReadyPeers()
+    {
+        return peers.values().stream().filter(Peer::GetIsReady).collect(Collectors.toList());
     }
 }
