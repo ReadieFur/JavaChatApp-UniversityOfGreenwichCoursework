@@ -162,9 +162,11 @@ public class ChatManager implements IDisposable
             }
 
             serverManager.start();
+            Logger.Trace(GetLogPrefix() + "Server started.");
 
             pingPong = new PingPong(serverManager);
             pingPong.start();
+            Logger.Trace(GetLogPrefix() + "PingPong started.");
         }
         else
         {
@@ -177,6 +179,8 @@ public class ChatManager implements IDisposable
 
             client.start();
         }
+
+        Logger.Debug("[CHAT_MANAGER] Promoted to " + (isHost ? "host" : "client") + ".");
     }
 
     private Boolean FindHost(String ipAddress, int port)
@@ -267,7 +271,7 @@ public class ChatManager implements IDisposable
                     peer.SetNickname(nickname);
                     peer.SetStatus(EPeerStatus.CONNECTED);
 
-                    Logger.Debug("[SERVER] Client connected: " + data.GetKey() + " (" + peer.nickname + ")");
+                    Logger.Debug(GetLogPrefix() + "Client connected: " + data.GetKey() + " (" + peer.nickname + ")");
 
                     //Return the server-validated handshake data back to the client.
                     NetMessage<Peer> handshakeResponse = new NetMessage<>();
@@ -308,7 +312,7 @@ public class ChatManager implements IDisposable
                     Peer inPayload = (Peer)netMessage.payload;
                     id = inPayload.GetUUID();
 
-                    Logger.Debug("[CLIENT] Connected to server.");
+                    Logger.Debug(GetLogPrefix() + "Connected to server.");
 
                     //Occurs when the handshake has been acknowledged by the server.
                     //Request a list of peers.
@@ -351,13 +355,13 @@ public class ChatManager implements IDisposable
                     {
                         case CONNECTED:
                         {
-                            Logger.Debug("[CLIENT] Peer connected: " + inPayload.GetUUID() + " (" + inPayload.nickname + ")");
+                            Logger.Debug(GetLogPrefix() + "Peer connected: " + inPayload.GetUUID() + " (" + inPayload.nickname + ")");
                             peers.putIfAbsent(inPayload.GetUUID(), inPayload);
                             break;
                         }
                         case DISCONNECTED:
                         {
-                            Logger.Debug("[CLIENT] Peer disconnected: " + inPayload.GetUUID() + " (" + inPayload.nickname + ")");
+                            Logger.Debug(GetLogPrefix() + "Peer disconnected: " + inPayload.GetUUID() + " (" + inPayload.nickname + ")");
                             if (peers.containsKey(inPayload.GetUUID()))
                                 peers.remove(inPayload.GetUUID());
                             break;
@@ -396,7 +400,7 @@ public class ChatManager implements IDisposable
             peers.remove(uuid);
 
             //Client has disconnected.
-            Logger.Debug("[SERVER] Client disconnected: " + uuid + "");
+            Logger.Debug(GetLogPrefix() + "Client disconnected: " + uuid + "");
 
             oldPeer.SetStatus(EPeerStatus.DISCONNECTED);
 
@@ -408,7 +412,7 @@ public class ChatManager implements IDisposable
         }
         else
         {
-            Logger.Debug("[CLIENT] Disconnected from server.");
+            Logger.Debug(GetLogPrefix() + "Disconnected from server.");
             Restart();
         }
     }
@@ -429,12 +433,19 @@ public class ChatManager implements IDisposable
         {
         }
 
-        Logger.Error(error.GetValue().getMessage());
+        Logger.Error(GetLogPrefix() + error.GetValue().getMessage());
     }
 
     private Collection<Peer> GetReadyPeers()
     {
         return peers.values().stream().filter(p -> p.status == EPeerStatus.CONNECTED).collect(Collectors.toList());
+    }
+    //#endregion
+
+    //#region Misc
+    private String GetLogPrefix()
+    {
+        return (isHost ? "[SERVER]" : "[CLIENT]") + " ";
     }
     //#endregion
 }

@@ -85,11 +85,13 @@ public class App
         }
         //#endregion
 
-        //Begin the chat manager.
+        //#region Begin the chat manager.
         ChatManager chatManager = new ChatManager(initialServerAddress, port, username);
         chatManager.Begin();
+        //#endregion
 
-        //Create the chat UI.
+        //#region Create the chat UI.
         //TODO: Create the chat ui.
+        //#endregion
     }
 }
