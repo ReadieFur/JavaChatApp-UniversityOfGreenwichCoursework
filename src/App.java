@@ -87,7 +87,7 @@ public class App
 
         //Begin the chat manager.
         ChatManager chatManager = new ChatManager(initialServerAddress, port, username);
-        // chatManager.Begin();
+        chatManager.Begin();
 
         //Create the chat UI.
         //TODO: Create the chat ui.

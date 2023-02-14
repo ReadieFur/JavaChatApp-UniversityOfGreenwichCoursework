@@ -1,7 +1,5 @@
 package chat_app;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
@@ -13,15 +11,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import chat_app.attributes.CommandAttribute;
-import chat_app.attributes.CommandParameterAttribute;
-import chat_app.attributes.CommandParameterAttributes;
 import chat_app.net_data.EPeerStatus;
 import chat_app.net_data.EType;
 import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import chat_app.net_data.PeersPayload;
-import readiefur.console.ConsoleWrapper;
 import readiefur.console.Logger;
 import readiefur.helpers.IDisposable;
 import readiefur.helpers.KeyValuePair;
@@ -189,16 +183,16 @@ public class ChatManager implements IDisposable
     {
         ManualResetEvent resetEvent = new ManualResetEvent(false);
 
-        Client client = new Client(ipAddress, port);
-        client.onConnect.Add(nul -> resetEvent.Set());
-        client.start();
+        Client dummyClient = new Client(ipAddress, port);
+        dummyClient.onConnect.Add(nul -> resetEvent.Set());
+        dummyClient.start();
 
         try { resetEvent.WaitOne(1000); }
         catch (TimeoutException e) {}
 
-        Boolean hostFound = client.IsConnected();
+        Boolean hostFound = dummyClient.IsConnected();
 
-        client.Dispose();
+        dummyClient.Dispose();
 
         return hostFound;
     }
