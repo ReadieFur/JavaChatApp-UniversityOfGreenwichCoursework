@@ -6,21 +6,20 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.xml.sax.SAXException;
 
 import chat_app.ChatManager;
-import readiefur.helpers.KeyValuePair;
-import readiefur.helpers.console.ConsoleColour;
-import readiefur.helpers.console.ConsoleWrapper;
+import readiefur.console.ELogLevel;
+import readiefur.console.Logger;
+import readiefur.xml_ui.exceptions.InvalidXMLException;
 import ui.ConfigurationUI;
 import ui.EMessageBoxButtons;
 import ui.MessageBox;
-import xml_ui.exceptions.InvalidXMLException;
 
 public class App
 {
     public static void main(String[] args)
     {
-        //#region Initialize the console manager.
-        ConsoleWrapper.Instantiate();
-        ConsoleWrapper.errPreprocessor = str -> new KeyValuePair<Boolean, String>(true, ConsoleColour.RED + "[ERROR] " + str + ConsoleColour.RESET);
+        //#region Initialize the console log manager.
+        Logger.ConfigureConsole();
+        Logger.logLevel = ELogLevel.TRACE;
         //#endregion
 
         //#region Parse command line arguments.
