@@ -35,7 +35,7 @@ public class App
             try { configurationWindow = new ConfigurationUI("127.0.0.1", 8080, "Anonymous"); }
             catch (IllegalArgumentException | IllegalAccessException | IOException | ParserConfigurationException | SAXException | InvalidXMLException e)
             {
-                System.err.println("Failed to load configuration UI: " + e.getMessage());
+                Logger.Critical("Failed to load configuration UI: " + e.getMessage());
                 System.exit(1);
                 return; //Required to satisfy the compiler.
             }
@@ -53,7 +53,7 @@ public class App
             .matcher(initialServerAddress)
             .matches())
         {
-            System.err.println("Invalid IP address: " + initialServerAddress);
+            Logger.Critical("Invalid IP address: " + initialServerAddress);
             MessageBox.ShowDialog(
                 "Chat App | Error",
                 "Invalid IP address",
@@ -64,7 +64,7 @@ public class App
 
         if (port < 0 || port > 65535)
         {
-            System.err.println("Invalid port: " + port);
+            Logger.Critical("Invalid port: " + port);
             MessageBox.ShowDialog(
                 "Chat App | Error",
                 "Invalid port",
@@ -75,7 +75,7 @@ public class App
 
         if (username == null || username.isBlank())
         {
-            System.err.println("Invalid username: " + username);
+            Logger.Critical("Invalid username: " + username);
             MessageBox.ShowDialog(
                 "Chat App | Error",
                 "Invalid username",
