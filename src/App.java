@@ -89,6 +89,10 @@ public class App
         String username = configurationWindow.GetUsername();
 
         //Begin the chat manager.
+        //TODO: Convert the chat manager to an instanceable class.
         // ChatManager.Begin(initialServerAddress, port, username);
+
+        //Create the chat UI.
+        //TODO: Create the chat ui.
     }
 }
