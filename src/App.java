@@ -10,6 +10,8 @@ import readiefur.helpers.KeyValuePair;
 import readiefur.helpers.console.ConsoleColour;
 import readiefur.helpers.console.ConsoleWrapper;
 import ui.ConfigurationUI;
+import ui.EMessageBoxButtons;
+import ui.MessageBox;
 import xml_ui.exceptions.InvalidXMLException;
 
 public class App
@@ -52,19 +54,34 @@ public class App
             .matcher(initialServerAddress)
             .matches())
         {
-            System.err.println("Invalid IP address.");
+            System.err.println("Invalid IP address: " + initialServerAddress);
+            MessageBox.ShowDialog(
+                "Chat App | Error",
+                "Invalid IP address",
+                "The IP address you have entered is invalid.",
+                EMessageBoxButtons.OK);
             System.exit(1);
         }
 
         if (port < 0 || port > 65535)
         {
-            System.err.println("Invalid port.");
+            System.err.println("Invalid port: " + port);
+            MessageBox.ShowDialog(
+                "Chat App | Error",
+                "Invalid port",
+                "The port you have entered is invalid.",
+                EMessageBoxButtons.OK);
             System.exit(1);
         }
 
         if (username == null || username.isBlank())
         {
-            System.err.println("Invalid username.");
+            System.err.println("Invalid username: " + username);
+            MessageBox.ShowDialog(
+                "Chat App | Error",
+                "Invalid username",
+                "The username you have entered is invalid.",
+                EMessageBoxButtons.OK);
             System.exit(1);
         }
         //#endregion
