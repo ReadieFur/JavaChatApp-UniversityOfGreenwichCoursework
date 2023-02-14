@@ -3,3 +3,4 @@
 - When migrating hosts, have the server tell the clients which client to connect to as the new host.
 - If the host server ends unexpectedly, have the clients use their peer list and try to connect to each one in order, if unsuccessful, become the host.
 - Make a menu based tool that can open chats for individual users or groups of users.
+- The ChatManager should handle all server and client events, however it should depend on external code to handle incoming connections.
