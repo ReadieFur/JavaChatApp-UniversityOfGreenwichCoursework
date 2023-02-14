@@ -21,64 +21,63 @@ import chat_app.net_data.EType;
 import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import chat_app.net_data.PeersPayload;
+import readiefur.helpers.IDisposable;
 import readiefur.helpers.KeyValuePair;
 import readiefur.helpers.ManualResetEvent;
 import readiefur.helpers.console.ConsoleWrapper;
 import readiefur.helpers.sockets.Client;
 import readiefur.helpers.sockets.ServerManager;
 
-public class ChatManager
+public class ChatManager implements IDisposable
 {
     //#region Properties
-    private static final ManualResetEvent exitEvent = new ManualResetEvent(false);
+    private final ManualResetEvent exitEvent = new ManualResetEvent(false);
 
     //"Constant" properties (doesn't change between calling Restart()).
-    private static String fallbackServerIPAddress;
-    private static int port;
-    private static String desiredUsername;
+    private String fallbackServerIPAddress;
+    private int port;
+    private String desiredUsername;
 
     //Server specific properties.
-    private static ServerManager serverManager = null;
-    private static PingPong pingPong = null;
+    private ServerManager serverManager = null;
+    private PingPong pingPong = null;
 
     //Client specific properties.
-    private static Client client = null;
+    private Client client = null;
 
     //Shared properties.
-    private static Boolean isHost = true;
-    private static UUID id = null;
-    private static ConcurrentHashMap<UUID, Peer> peers = new ConcurrentHashMap<>();
+    private Boolean isHost = true;
+    private UUID id = null;
+    private ConcurrentHashMap<UUID, Peer> peers = new ConcurrentHashMap<>();
     //#endregion
 
     //#region Initialization and Cleanup
-    //Hide the constructor.
-    private ChatManager() {}
-
-    //This is a blocking method that will not return until the application is closed.
-    public static void Begin(String initialServerAddress, int port, String desiredUsername)
+    public ChatManager(String initialServerAddress, int port, String desiredUsername)
     {
         fallbackServerIPAddress = initialServerAddress;
-        ChatManager.port = port;
-        ChatManager.desiredUsername = desiredUsername == null || desiredUsername.isBlank() ? "Anonymous" : desiredUsername;
+        this.port = port;
+        this.desiredUsername = desiredUsername;
+    }
 
+    //This is a blocking method that will not return until the application is closed.
+    public void Begin()
+    {
         //Start the manager.
         Restart();
 
-        //Start the console input thread.
-        ConsoleInputThread consoleInputThread = ConsoleInputThread.GetInstance();
-        consoleInputThread.onInput.Add(ChatManager::OnConsoleInput);
-
         //Wait indefinitely until signaled to exit.
-        exitEvent.WaitOne();
+        // exitEvent.WaitOne();
 
-        consoleInputThread.Dispose();
-        Cleanup();
-
-        //[TEMPORARY] Please read "ConsoleInputManagerThread.java:51".
-        System.exit(0);
+        // Cleanup();
     }
 
-    private static void Cleanup()
+    public void Dispose()
+    {
+        exitEvent.Set();
+        Cleanup();
+    }
+
+    private void Cleanup()
     {
         //Server related.
         if (serverManager != null)
@@ -106,7 +105,7 @@ public class ChatManager
     //#endregion
 
     //#region Setup methods
-    private static void Restart()
+    private void Restart()
     {
         UUID oldClientID = id;
         List<Peer> oldPeers = new ArrayList<>(peers.values());
@@ -152,10 +151,10 @@ public class ChatManager
         {
             //Start the server.
             serverManager = new ServerManager(port);
-            serverManager.onConnect.Add(ChatManager::OnNetConnect);
-            serverManager.onMessage.Add(ChatManager::OnNetMessage);
-            serverManager.onClose.Add(ChatManager::OnNetClose);
-            serverManager.onError.Add(ChatManager::OnNetError);
+            serverManager.onConnect.Add(this::OnNetConnect);
+            serverManager.onMessage.Add(this::OnNetMessage);
+            serverManager.onClose.Add(this::OnNetClose);
+            serverManager.onError.Add(this::OnNetError);
 
             try
             {
@@ -190,7 +189,7 @@ public class ChatManager
         }
     }
 
-    private static Boolean FindHost(String ipAddress, int port)
+    private Boolean FindHost(String ipAddress, int port)
     {
         ManualResetEvent resetEvent = new ManualResetEvent(false);
 
@@ -211,7 +210,7 @@ public class ChatManager
 
     //#region Network Events
     //UUIDs are null for client connections.
-    private static void OnNetConnect(UUID uuid)
+    private void OnNetConnect(UUID uuid)
     {
         if (isHost)
         {
@@ -233,7 +232,7 @@ public class ChatManager
         }
     }
 
-    private static void OnNetMessage(KeyValuePair<UUID, Object> data)
+    private void OnNetMessage(KeyValuePair<UUID, Object> data)
     {
         NetMessage<?> netMessage = (NetMessage<?>)data.GetValue();
 
@@ -389,7 +388,7 @@ public class ChatManager
         }
     }
 
-    private static void OnNetClose(UUID uuid)
+    private void OnNetClose(UUID uuid)
     {
         if (isHost)
         {
@@ -424,7 +423,7 @@ public class ChatManager
         }
     }
 
-    private static void OnNetError(KeyValuePair<UUID, Exception> error)
+    private void OnNetError(KeyValuePair<UUID, Exception> error)
     {
         if (isHost)
         {
@@ -443,14 +442,14 @@ public class ChatManager
         System.err.println(error.GetValue().getMessage());
     }
 
-    private static Collection<Peer> GetReadyPeers()
+    private Collection<Peer> GetReadyPeers()
     {
         return peers.values().stream().filter(p -> p.status == EPeerStatus.CONNECTED).collect(Collectors.toList());
     }
     //#endregion
 
     //#region User interactive
-    private static void OnConsoleInput(String data)
+    private void OnConsoleInput(String data)
     {
         String[] splitData = data.split(" ");
 
@@ -511,7 +510,7 @@ public class ChatManager
     }
 
     @CommandAttribute(description = "Prints a list of available commands.", availableInMode = 0)
-    private static void Help()
+    private void Help()
     {
         //This method is modeled after my C# implementation of this attribute based command system: https://github.com/ReadieFur/CreateProcessAsUser/blob/fd80746a175c52bd64edc40a5c1e590c65c171d5/src/CreateProcessAsUser.Service/UserInteractive.cs#L387-L401
 
@@ -548,13 +547,13 @@ public class ChatManager
     }
 
     @CommandAttribute(description = "Exits the application.", availableInMode = 0)
-    private static void Exit()
+    private void Exit()
     {
         exitEvent.Set();
     }
 
     @CommandAttribute(description = "Lists the available peers.", availableInMode = 0)
-    private static void ListPeers()
+    private void ListPeers()
     {
         Collection<Peer> peers = GetReadyPeers();
 
