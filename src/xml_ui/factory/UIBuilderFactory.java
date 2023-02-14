@@ -143,6 +143,10 @@ public class UIBuilderFactory
 
                     namedComponents.put(attributeValue, component);
                 }
+                else if (attributeName.equals("Visible"))
+                {
+                    component.setVisible(Boolean.parseBoolean(attributeValue));
+                }
                 //Try to set the attribute as a setter.
                 else if (setterNames.contains(attributeName))
                 {

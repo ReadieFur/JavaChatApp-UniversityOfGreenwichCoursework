@@ -1,0 +1,29 @@
+<Window
+    xmlns="xml_ui.controls"
+    MinWidth="300" MinHeight="150"
+    Resizable="false"
+    Background="{Binding backgroundColour}">
+    <Window.Resources>
+        <Resource Key="buttonMargin" Value="0,4,0,0"/>
+    </Window.Resources>
+    <Grid>
+        <!-- Nested grid so that the margin can be applied. -->
+        <Grid Margin="4,4,4,4">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <!-- This will force the row to take up as much space is needed, but no more than what is needed. -->
+                <RowDefinition Height="0px"/>
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0">
+                <Label Name="header" Foreground="{Binding foregroundColour}"/>
+                <Label Name="message" Foreground="{Binding foregroundColour}"/>
+            </StackPanel>
+            <StackPanel Name="buttons" Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Right" Orientation="RightToLeft">
+                <Button Name="yesButton" Content="Yes" Click="yesButton_Click" Visible="false" Margin="{Resource buttonMargin}"/>
+                <Button Name="noButton" Content="No" Click="noButton_Click" Visible="false" Margin="{Resource buttonMargin}"/>
+                <Button Name="okButton" Content="Ok" Click="okButton_Click" Visible="false" Margin="{Resource buttonMargin}"/>
+                <Button Name="cancelButton" Content="Cancel" Click="cancelButton_Click" Visible="false" Margin="{Resource buttonMargin}"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
