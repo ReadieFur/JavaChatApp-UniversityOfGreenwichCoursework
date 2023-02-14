@@ -11,8 +11,10 @@ public class Logger
     public static void ConfigureConsole()
     {
         ConsoleWrapper.Instantiate();
-        ConsoleWrapper.outPreprocessor = str -> new KeyValuePair<Boolean, String>(true, ConsoleColour.WHITE + "[INFO] " + str + ConsoleColour.RESET);
-        ConsoleWrapper.errPreprocessor = str -> new KeyValuePair<Boolean, String>(true, ConsoleColour.RED + "[ERROR] " + str + ConsoleColour.RESET);
+        ConsoleWrapper.outPreprocessor = str ->
+            new KeyValuePair<Boolean, String>(logLevel >= ELogLevel.INFO, ConsoleColour.WHITE + "[INFO] " + str + ConsoleColour.RESET);
+        ConsoleWrapper.errPreprocessor = str ->
+            new KeyValuePair<Boolean, String>(logLevel >= ELogLevel.ERROR, ConsoleColour.RED + "[ERROR] " + str + ConsoleColour.RESET);
     }
 
     private static String GetStackStringInternal()
