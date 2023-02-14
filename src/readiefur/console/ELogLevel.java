@@ -7,6 +7,6 @@ public abstract class ELogLevel
     public static final int INFO = 2;
     public static final int WARN = 3;
     public static final int ERROR = 4;
-    public static final int FATAL = 5;
+    public static final int CRITICAL = 5;
     public static final int NONE = 6;
 }

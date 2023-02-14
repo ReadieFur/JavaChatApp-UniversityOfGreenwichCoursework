@@ -45,9 +45,9 @@ public class Logger
             ConsoleWrapper.GetStdErr().println(ConsoleColour.RED + "[ERROR] " + message + ConsoleColour.RESET);
     }
 
-    public static void Fatal(String message)
+    public static void Critical(String message)
     {
-        if (logLevel <= ELogLevel.FATAL)
+        if (logLevel <= ELogLevel.CRITICAL)
             ConsoleWrapper.GetStdErr().println(ConsoleColour.MAGENTA + "[FATAL] " + message + ConsoleColour.RESET);
     }
 }
