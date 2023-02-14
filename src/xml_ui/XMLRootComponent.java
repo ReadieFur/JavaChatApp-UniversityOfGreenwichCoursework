@@ -40,7 +40,7 @@ public class XMLRootComponent<TRootComponent extends Component>
         Map<String, Consumer<Object[]>> eventCallbacks = new HashMap<>();
 
         //Gets the intermediate path to the class file which we will use to load the XML file.
-        InputStream xmlFileStream = this.getClass().getResource(this.getClass().getName() + ".xml").openStream();
+        InputStream xmlFileStream = this.getClass().getResourceAsStream(this.getClass().getSimpleName() + ".xml");
 
         //#region Load the XML file
         Element xmlRootElement;
