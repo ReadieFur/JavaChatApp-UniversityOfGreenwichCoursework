@@ -75,7 +75,7 @@ public class App
 
         //Get the desired user configuration.
         ConfigurationUI configurationWindow;
-        try { configurationWindow = new ConfigurationUI(); }
+        try { configurationWindow = new ConfigurationUI("127.0.0.1", 8080, "Anonymous"); }
         catch (IllegalArgumentException | IllegalAccessException | IOException | ParserConfigurationException | SAXException | InvalidXMLException e)
         {
             System.err.println("Failed to load configuration UI: " + e.getMessage());
@@ -87,5 +87,8 @@ public class App
         String initialServerAddress = configurationWindow.GetServerAddress();
         int port = configurationWindow.GetPort();
         String username = configurationWindow.GetUsername();
+
+        //Begin the chat manager.
+        // ChatManager.Begin(initialServerAddress, port, username);
     }
 }

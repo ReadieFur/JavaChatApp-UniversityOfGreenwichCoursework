@@ -1,27 +1,30 @@
 <Window
     xmlns="xml_ui.controls"
-    Title="Chat App | Configuration">
+    Title="Chat App | Configuration"
+    MinWidth="350" MinHeight="200"
+    Resizable="false">
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition/>
-            <RowDefinition/>
-            <RowDefinition/>
-            <RowDefinition/>
-        </Grid.RowDefinitions>
-        <StackPanel Grid.Row="0">
-            <Label Text="Initial server address:"/>
-            <TextBox Name="serverAddress"/>
-        </StackPanel>
-        <StackPanel Grid.Row="1">
-            <Label Text="Port:"/>
-            <TextBox Name="port"/>
-        </StackPanel>
-        <StackPanel Grid.Row="2">
-            <Label Text="Username:"/>
-            <TextBox Name="username"/>
-        </StackPanel>
-        <StackPanel Grid.Row="3">
-            <Button Content="Connect" Click="Connect_Click"/>
-        </StackPanel>
+        <!-- Nested grid so that the margin can be applied. -->
+        <Grid Margin="5,5,5,5">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <StackPanel Grid.Row="0">
+                <Label Text="Initial server address:"/>
+                <TextBox Name="serverAddress"/>
+            </StackPanel>
+            <StackPanel Grid.Row="1">
+                <Label Text="Port:"/>
+                <TextBox Name="port"/>
+            </StackPanel>
+            <StackPanel Grid.Row="2">
+                <Label Text="Username:"/>
+                <TextBox Name="username"/>
+            </StackPanel>
+            <Button Grid.Row="3" Content="Connect" Click="Connect_Click" HorizontalAlignment="Center"/>
+        </Grid>
     </Grid>
 </Window>

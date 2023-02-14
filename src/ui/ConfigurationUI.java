@@ -7,7 +7,6 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
-import readiefur.helpers.ManualResetEvent;
 import xml_ui.attributes.EventCallbackAttribute;
 import xml_ui.attributes.NamedComponentAttribute;
 import xml_ui.controls.Window;
@@ -15,56 +14,66 @@ import xml_ui.exceptions.InvalidXMLException;
 
 public class ConfigurationUI extends Window
 {
-    private ManualResetEvent dialogueResetEvent = new ManualResetEvent(false);
-
     @NamedComponentAttribute
     private JTextField serverAddress;
-
     @NamedComponentAttribute
     private JTextField port;
-
     @NamedComponentAttribute
     private JTextField username;
 
-    public ConfigurationUI() throws IllegalArgumentException, IllegalAccessException, IOException, ParserConfigurationException, SAXException, InvalidXMLException
+    private String defaultServerAddress;
+    private int defaultPort;
+    private String defaultUsername;
+
+    public ConfigurationUI(String defaultServerAddress, int defaultPort, String defaultUsername)
+        throws IllegalArgumentException, IllegalAccessException, IOException, ParserConfigurationException, SAXException, InvalidXMLException
     {
         super();
 
         //Auto-size the window.
         rootComponent.pack();
+
+        //Set the default values.
+        this.defaultServerAddress = defaultServerAddress;
+        this.defaultPort = defaultPort;
+        this.defaultUsername = defaultUsername;
+
+        //Fill out the default values.
+        serverAddress.setText(defaultServerAddress);
+        port.setText(Integer.toString(defaultPort));
+        username.setText(defaultUsername);
     }
 
     public String GetServerAddress()
     {
-        final String DEFAULT_VALUE = "127.0.0.1";
         String value = serverAddress.getText();
         if (value == null || value.isEmpty())
-            return DEFAULT_VALUE;
+            return defaultServerAddress;
         return value;
     }
 
     public int GetPort()
     {
-        final int DEFAULT_VALUE = 8080;
         String value = port.getText();
         if (value == null || value.isEmpty())
-            return DEFAULT_VALUE;
+            return defaultPort;
 
         try { return Integer.parseInt(value); }
-        catch (NumberFormatException e) { return DEFAULT_VALUE; }
+        catch (NumberFormatException e) { return defaultPort; }
     }
 
     public String GetUsername()
     {
-        final String DEFAULT_VALUE = "Anonymous";
         String value = username.getText();
         if (value == null || value.isEmpty())
-            return DEFAULT_VALUE;
+            return defaultUsername;
         return value;
     }
 
     @EventCallbackAttribute
     private void Connect_Click(Object[] args)
     {
+        //Close the window.
+        rootComponent.dispose();
     }
 }
