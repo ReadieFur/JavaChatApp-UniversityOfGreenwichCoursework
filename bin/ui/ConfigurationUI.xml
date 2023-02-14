@@ -7,6 +7,8 @@
     <Grid>
         <!-- Nested grid so that the margin can be applied. -->
         <Grid Margin="5,5,5,5">
+            <!-- The reason for the use of a grid here is because I want each item to be equally spaced across the entire window.
+            Whereas a stack panel will top-align everything. -->
             <Grid.RowDefinitions>
                 <RowDefinition/>
                 <RowDefinition/>
