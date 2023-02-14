@@ -7,6 +7,8 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
+import xml_ui.Observable;
+import xml_ui.attributes.BindingAttribute;
 import xml_ui.attributes.EventCallbackAttribute;
 import xml_ui.attributes.NamedComponentAttribute;
 import xml_ui.controls.Window;
@@ -20,6 +22,13 @@ public class ConfigurationUI extends Window
     private JTextField port;
     @NamedComponentAttribute
     private JTextField username;
+
+    @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_PRIMARY)
+    private Observable<String> backgroundColour;
+    @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_SECONDARY)
+    private Observable<String> backgroundColourAlt;
+    @BindingAttribute(DefaultValue = Themes.LIGHT_FOREGROUND)
+    private Observable<String> foregroundColour;
 
     private String defaultServerAddress;
     private int defaultPort;

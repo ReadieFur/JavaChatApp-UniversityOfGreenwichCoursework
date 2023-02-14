@@ -36,6 +36,7 @@ public class StackPanel
     {
         JPanel panel = new JPanel();
         panel.setLayout(new GridBagLayout());
+        panel.setOpaque(false);
 
         //After some short researching, I found that you can store custom properties on a component which will help this method out A LOT.
         //The reason I thought of doing this is because C# has a similar feature for its WPF framework.

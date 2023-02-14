@@ -2,7 +2,8 @@
     xmlns="xml_ui.controls"
     Title="Chat App | Configuration"
     MinWidth="350" MinHeight="200"
-    Resizable="false">
+    Resizable="false"
+    Background="{Binding backgroundColour}">
     <Grid>
         <!-- Nested grid so that the margin can be applied. -->
         <Grid Margin="5,5,5,5">
@@ -13,16 +14,16 @@
                 <RowDefinition/>
             </Grid.RowDefinitions>
             <StackPanel Grid.Row="0">
-                <Label Text="Initial server address:"/>
-                <TextBox Name="serverAddress"/>
+                <Label Text="Initial server address:" Foreground="{Binding foregroundColour}"/>
+                <TextBox Name="serverAddress" Background="{Binding backgroundColourAlt}" Foreground="{Binding foregroundColour}"/>
             </StackPanel>
             <StackPanel Grid.Row="1">
-                <Label Text="Port:"/>
-                <TextBox Name="port"/>
+                <Label Text="Port:" Foreground="{Binding foregroundColour}"/>
+                <TextBox Name="port" Background="{Binding backgroundColourAlt}" Foreground="{Binding foregroundColour}"/>
             </StackPanel>
             <StackPanel Grid.Row="2">
-                <Label Text="Username:"/>
-                <TextBox Name="username"/>
+                <Label Text="Username:" Foreground="{Binding foregroundColour}"/>
+                <TextBox Name="username" Background="{Binding backgroundColourAlt}" Foreground="{Binding foregroundColour}"/>
             </StackPanel>
             <Button Grid.Row="3" Content="Connect" Click="Connect_Click" HorizontalAlignment="Center"/>
         </Grid>
