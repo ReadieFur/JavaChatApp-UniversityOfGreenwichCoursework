@@ -137,6 +137,9 @@ public class ChatManager implements IDisposable
 
         //If a host was not found, begin hosting.
         isHost = hostAddress == null;
+
+        Logger.Debug("[CHAT_MANAGER] Promoted to " + (isHost ? "host" : "client") + ".");
+
         if (isHost)
         {
             //Start the server.
@@ -178,9 +181,8 @@ public class ChatManager implements IDisposable
             client.onError.Add(error -> OnNetError(new KeyValuePair<>(null, error)));
 
             client.start();
+            Logger.Trace(GetLogPrefix() + "Client started.");
         }
-
-        Logger.Debug("[CHAT_MANAGER] Promoted to " + (isHost ? "host" : "client") + ".");
     }
 
     private Boolean FindHost(String ipAddress, int port)
@@ -206,6 +208,8 @@ public class ChatManager implements IDisposable
     //UUIDs are null for client connections.
     private void OnNetConnect(UUID uuid)
     {
+        Logger.Trace(GetLogPrefix() + "Connection opened: " + uuid);
+
         if (isHost)
         {
             /*When a new client connects, we add them to the list of peers however we don't,
@@ -228,6 +232,8 @@ public class ChatManager implements IDisposable
 
     private void OnNetMessage(KeyValuePair<UUID, Object> data)
     {
+        Logger.Trace(GetLogPrefix() + "Message received: " + data.GetKey());
+
         NetMessage<?> netMessage = (NetMessage<?>)data.GetValue();
 
         if (isHost)
@@ -384,6 +390,8 @@ public class ChatManager implements IDisposable
 
     private void OnNetClose(UUID uuid)
     {
+        Logger.Trace(GetLogPrefix() + "Connection closed: " + uuid);
+
         if (isHost)
         {
             //Server has closed, handled in OnNetError.
@@ -419,6 +427,8 @@ public class ChatManager implements IDisposable
 
     private void OnNetError(KeyValuePair<UUID, Exception> error)
     {
+        Logger.Trace(GetLogPrefix() + "OnNetError");
+
         if (isHost)
         {
             if (error.GetValue() instanceof BindException)
