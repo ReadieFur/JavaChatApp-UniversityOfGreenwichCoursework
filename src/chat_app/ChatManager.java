@@ -16,6 +16,7 @@ import chat_app.net_data.EType;
 import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import chat_app.net_data.PeersPayload;
+import readiefur.console.ELogLevel;
 import readiefur.console.Logger;
 import readiefur.helpers.IDisposable;
 import readiefur.helpers.KeyValuePair;
@@ -444,6 +445,8 @@ public class ChatManager implements IDisposable
         }
 
         Logger.Error(GetLogPrefix() + error.GetValue().getMessage());
+        if (Logger.logLevel == ELogLevel.TRACE)
+            error.GetValue().printStackTrace();
     }
 
     private Collection<Peer> GetReadyPeers()
