@@ -22,6 +22,7 @@ import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import chat_app.net_data.PeersPayload;
 import readiefur.console.ConsoleWrapper;
+import readiefur.console.Logger;
 import readiefur.helpers.IDisposable;
 import readiefur.helpers.KeyValuePair;
 import readiefur.helpers.ManualResetEvent;
@@ -64,11 +65,6 @@ public class ChatManager implements IDisposable
     {
         //Start the manager.
         Restart();
-
-        //Wait indefinitely until signaled to exit.
-        // exitEvent.WaitOne();
-
-        // Cleanup();
     }
 
     public void Dispose()
@@ -277,7 +273,7 @@ public class ChatManager implements IDisposable
                     peer.SetNickname(nickname);
                     peer.SetStatus(EPeerStatus.CONNECTED);
 
-                    System.out.println("[SERVER] Client connected: " + data.GetKey() + " (" + peer.nickname + ")");
+                    Logger.Debug("[SERVER] Client connected: " + data.GetKey() + " (" + peer.nickname + ")");
 
                     //Return the server-validated handshake data back to the client.
                     NetMessage<Peer> handshakeResponse = new NetMessage<>();
@@ -318,7 +314,7 @@ public class ChatManager implements IDisposable
                     Peer inPayload = (Peer)netMessage.payload;
                     id = inPayload.GetUUID();
 
-                    System.out.println("[CLIENT] Connected to server.");
+                    Logger.Debug("[CLIENT] Connected to server.");
 
                     //Occurs when the handshake has been acknowledged by the server.
                     //Request a list of peers.
@@ -361,13 +357,13 @@ public class ChatManager implements IDisposable
                     {
                         case CONNECTED:
                         {
-                            System.out.println("[CLIENT] Peer connected: " + inPayload.GetUUID() + " (" + inPayload.nickname + ")");
+                            Logger.Debug("[CLIENT] Peer connected: " + inPayload.GetUUID() + " (" + inPayload.nickname + ")");
                             peers.putIfAbsent(inPayload.GetUUID(), inPayload);
                             break;
                         }
                         case DISCONNECTED:
                         {
-                            System.out.println("[CLIENT] Peer disconnected: " + inPayload.GetUUID() + " (" + inPayload.nickname + ")");
+                            Logger.Debug("[CLIENT] Peer disconnected: " + inPayload.GetUUID() + " (" + inPayload.nickname + ")");
                             if (peers.containsKey(inPayload.GetUUID()))
                                 peers.remove(inPayload.GetUUID());
                             break;
@@ -406,7 +402,7 @@ public class ChatManager implements IDisposable
             peers.remove(uuid);
 
             //Client has disconnected.
-            System.out.println("[SERVER] Client disconnected: " + uuid + "");
+            Logger.Debug("[SERVER] Client disconnected: " + uuid + "");
 
             oldPeer.SetStatus(EPeerStatus.DISCONNECTED);
 
@@ -418,7 +414,7 @@ public class ChatManager implements IDisposable
         }
         else
         {
-            System.out.println("[CLIENT] Disconnected from server.");
+            Logger.Debug("[CLIENT] Disconnected from server.");
             Restart();
         }
     }
@@ -439,144 +435,12 @@ public class ChatManager implements IDisposable
         {
         }
 
-        System.err.println(error.GetValue().getMessage());
+        Logger.Error(error.GetValue().getMessage());
     }
 
     private Collection<Peer> GetReadyPeers()
     {
         return peers.values().stream().filter(p -> p.status == EPeerStatus.CONNECTED).collect(Collectors.toList());
-    }
-    //#endregion
-
-    //#region User interactive
-    private void OnConsoleInput(String data)
-    {
-        String[] splitData = data.split(" ");
-
-        if (splitData.length == 0)
-            return;
-
-        String command = splitData[0];
-
-        //Reflect on this method and get all of the commands.
-        Method matchingMethod = null;
-        CommandAttribute matchingCommandAttribute = null;
-        for (Method method : ChatManager.class.getDeclaredMethods())
-        {
-            //Get the command attribute (if applicable).
-            CommandAttribute commandAttribute = method.getAnnotation(CommandAttribute.class);
-
-            //Check if the command matches the command attribute.
-            if (commandAttribute == null || !method.getName().toLowerCase().equals(command))
-                continue;
-
-            matchingMethod = method;
-            matchingCommandAttribute = commandAttribute;
-        }
-        if (matchingMethod == null)
-        {
-            ConsoleWrapper.SyncWriteLine("Unknown command. Type 'help' for a list of commands.");
-            return;
-        }
-
-        //Check if the command is available in the current mode.
-        if (matchingCommandAttribute.availableInMode() != 0 && matchingCommandAttribute.availableInMode() != (isHost ? 1 : 2))
-        {
-            ConsoleWrapper.SyncWriteLine("Command not available in this mode.");
-            return;
-        }
-
-        //Check if the command has the correct number of parameters.
-        CommandParameterAttributes parameters = matchingMethod.getAnnotation(CommandParameterAttributes.class);
-        if (splitData.length - 1 != (parameters == null ? 0 : parameters.value().length))
-        {
-            ConsoleWrapper.SyncWriteLine("Invalid number of parameters.");
-            return;
-        }
-
-        //Invoke the command.
-        try
-        {
-            Object[] params = new Object[splitData.length - 1];
-            for (int i = 1; i < splitData.length; i++)
-                params[i - 1] = splitData[i];
-            matchingMethod.invoke(null, params);
-        }
-        catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {}
-        catch (Exception ex)
-        {
-            System.err.println(ex.getMessage());
-        }
-    }
-
-    @CommandAttribute(description = "Prints a list of available commands.", availableInMode = 0)
-    private void Help()
-    {
-        //This method is modeled after my C# implementation of this attribute based command system: https://github.com/ReadieFur/CreateProcessAsUser/blob/fd80746a175c52bd64edc40a5c1e590c65c171d5/src/CreateProcessAsUser.Service/UserInteractive.cs#L387-L401
-
-        String helpMessage = "Command usage: [Command] <Parameter...>";
-
-        //Reflect on this method and get all of the commands.
-        for (Method method : ChatManager.class.getDeclaredMethods())
-        {
-            CommandAttribute commandAttribute = method.getAnnotation(CommandAttribute.class);
-            if (commandAttribute == null)
-                continue;
-
-            helpMessage += "\n\t" + method.getName();
-
-            if (commandAttribute.description() != null && !commandAttribute.description().isBlank())
-                helpMessage += "\n\t\t" + commandAttribute.description();
-
-            //Get the parameters of the method.
-            CommandParameterAttributes parameters = method.getAnnotation(CommandParameterAttributes.class);
-            if (parameters != null)
-            {
-                for (CommandParameterAttribute parameter : parameters.value())
-                {
-                    helpMessage += "\n\t\t\t" + parameter.name();
-
-                    //The description is optional. Each newline on the description will be replaced by a new line and indentation.
-                    if (parameter.description() != null && !parameter.description().isBlank())
-                        helpMessage += "\n\t\t\t\t" + parameter.description().replace("\n", "\n\t\t\t\t");
-                }
-            }
-        }
-
-        ConsoleWrapper.SyncWriteLine(helpMessage);
-    }
-
-    @CommandAttribute(description = "Exits the application.", availableInMode = 0)
-    private void Exit()
-    {
-        exitEvent.Set();
-    }
-
-    @CommandAttribute(description = "Lists the available peers.", availableInMode = 0)
-    private void ListPeers()
-    {
-        Collection<Peer> peers = GetReadyPeers();
-
-        if (peers.isEmpty())
-        {
-            ConsoleWrapper.SyncWriteLine("No peers available.");
-            return;
-        }
-
-        String peersMessage = "Available peers:";
-        for (Peer peer : peers)
-        {
-            peersMessage += "\n\t";
-
-            if (peer.GetUUID().equals(id))
-                peersMessage += "[You] ";
-
-            peersMessage += peer.nickname;
-
-            if (isHost)
-                peersMessage += " (" + peer.GetUUID() + " | " + peer.GetIPAddress() + ")";
-        }
-        ConsoleWrapper.SyncWriteLine(peersMessage);
     }
     //#endregion
 }
