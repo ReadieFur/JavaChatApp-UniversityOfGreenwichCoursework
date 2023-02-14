@@ -9,12 +9,12 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
-import xml_ui.Observable;
-import xml_ui.attributes.BindingAttribute;
-import xml_ui.attributes.EventCallbackAttribute;
-import xml_ui.attributes.NamedComponentAttribute;
-import xml_ui.controls.Window;
-import xml_ui.exceptions.InvalidXMLException;
+import readiefur.xml_ui.Observable;
+import readiefur.xml_ui.attributes.BindingAttribute;
+import readiefur.xml_ui.attributes.EventCallbackAttribute;
+import readiefur.xml_ui.attributes.NamedComponentAttribute;
+import readiefur.xml_ui.controls.Window;
+import readiefur.xml_ui.exceptions.InvalidXMLException;
 
 public class MessageBox extends Window
 {

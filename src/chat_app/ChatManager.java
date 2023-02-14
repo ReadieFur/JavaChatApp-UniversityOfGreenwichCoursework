@@ -21,12 +21,12 @@ import chat_app.net_data.EType;
 import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import chat_app.net_data.PeersPayload;
+import readiefur.console.ConsoleWrapper;
 import readiefur.helpers.IDisposable;
 import readiefur.helpers.KeyValuePair;
 import readiefur.helpers.ManualResetEvent;
-import readiefur.helpers.console.ConsoleWrapper;
-import readiefur.helpers.sockets.Client;
-import readiefur.helpers.sockets.ServerManager;
+import readiefur.sockets.Client;
+import readiefur.sockets.ServerManager;
 
 public class ChatManager implements IDisposable
 {

@@ -7,8 +7,8 @@ import chat_app.net_data.EType;
 import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import readiefur.helpers.KeyValuePair;
-import readiefur.helpers.sockets.ServerClientHost;
-import readiefur.helpers.sockets.ServerManager;
+import readiefur.sockets.ServerClientHost;
+import readiefur.sockets.ServerManager;
 
 public class PingPong extends Thread
 {
