@@ -6,5 +6,6 @@
     ],
     "cSpell.words": [
         "structs"
-    ]
+    ],
+    "java.debug.settings.onBuildFailureProceed": true
 }
