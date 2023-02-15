@@ -18,7 +18,7 @@ public class App
     public static void main(String[] args)
     {
         //#region Initialize the console log manager.
-        // Logger.ConfigureConsole();
+        Logger.ConfigureConsole();
         Logger.logLevel = ELogLevel.TRACE;
         //#endregion
 
