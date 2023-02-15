@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import chat_app.net_data.EPeerStatus;
 import chat_app.net_data.EType;
 import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
@@ -147,9 +148,10 @@ public class ChatManager implements IDisposable
 
             try
             {
-                Peer serverPeer = new Peer(ServerManager.SERVER_UUID, Inet4Address.getLocalHost().getHostAddress());
-                serverPeer.SetIsReady();
-                //TODO: Server username.
+                //TODO: Store server peers in the array once the rest of the code is updated and tested.
+                //(I believe this may have been the culprit for the program breaking before).
+                Peer serverPeer = ServerPeer.ToPeer(
+                    new ServerPeer(ServerManager.SERVER_UUID, Inet4Address.getLocalHost().getHostAddress(), desiredUsername, EPeerStatus.UNINITIALIZED));
                 peers.put(ServerManager.SERVER_UUID, serverPeer);
             }
             catch (UnknownHostException e)
@@ -211,7 +213,8 @@ public class ChatManager implements IDisposable
         {
             /*When a new client connects, we add them to the list of peers however we don't,
              *indicate that the client is ready yet, we must wait for the handshake first.*/
-            peers.put(uuid, new Peer(uuid, serverManager.GetClientHosts().get(uuid).GetSocket().getInetAddress().getHostAddress()));
+            // peers.put(uuid, new Peer(uuid, serverManager.GetClientHosts().get(uuid).GetSocket().getInetAddress().getHostAddress()));
+            peers.put(uuid, ServerPeer.ToPeer(new ServerPeer(uuid, fallbackServerIPAddress, desiredUsername, EPeerStatus.UNINITIALIZED)));
         }
         else
         {
@@ -252,7 +255,7 @@ public class ChatManager implements IDisposable
                         for (Peer peer : peers.values())
                         {
                             //It seems like string == string is not the same as string.equals(string) in Java.
-                            if (peer.GetIsReady() && peer.nickname != null && peer.nickname.equals(nickname))
+                            if (peer.GetStatus() == EPeerStatus.CONNECTED && peer.nickname != null && peer.nickname.equals(nickname))
                             {
                                 duplicateFound = true;
                                 break;
@@ -267,7 +270,7 @@ public class ChatManager implements IDisposable
                     //Indicate that the client is ready.
                     Peer peer = peers.get(data.item1);
                     peer.nickname = nickname;
-                    peer.SetIsReady();
+                    // peer.SetIsReady();
 
                     Logger.Debug(GetLogPrefix() + "Client connected: " + data.item1 + " (" + peer.nickname + ")");
                     Logger.Info(GetLogPrefix() + "Client connected: " + peer.nickname);
@@ -350,19 +353,18 @@ public class ChatManager implements IDisposable
 
         if (isHost)
         {
-            //Server has closed, handled in OnNetError.
-            if (uuid == ServerManager.SERVER_UUID)
+            //Server has closed, handled in OnNetError || Can occur for server lookups.
+            if (uuid == ServerManager.SERVER_UUID || !peers.containsKey(uuid))
                 return;
 
             //Client has disconnected.
-            if (peers.get(uuid).GetIsReady())
-            {
-                String nickname = peers.get(uuid).nickname;
-                Logger.Debug(GetLogPrefix() + "Client disconnected: " + uuid + " (" + nickname + ")");
-                Logger.Info(GetLogPrefix() + "Client disconnected: " + nickname);
-            }
-
+            Peer oldPeer = peers.get(uuid);
             peers.remove(uuid);
+
+            Logger.Debug(GetLogPrefix() + "Client disconnected: " + uuid + " (" + oldPeer.GetNickname() + ")");
+            Logger.Info(GetLogPrefix() + "Client disconnected: " + oldPeer.GetNickname());
+
+            //Broadcast the disconnected peer to all other clients.
         }
         else
         {
@@ -392,7 +394,10 @@ public class ChatManager implements IDisposable
 
     private Collection<Peer> GetReadyPeers()
     {
-        return peers.values().stream().filter(Peer::GetIsReady).collect(Collectors.toList());
+        return peers.values()
+            .stream()
+            .filter(p -> p.status == EPeerStatus.CONNECTED)
+            .collect(Collectors.toList());
     }
 
     private String GetLogPrefix()
