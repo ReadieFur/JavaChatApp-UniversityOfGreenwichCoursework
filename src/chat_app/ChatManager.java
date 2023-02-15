@@ -15,6 +15,7 @@ import chat_app.net_data.EType;
 import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import chat_app.net_data.PeersPayload;
+import readiefur.console.Logger;
 import readiefur.misc.IDisposable;
 import readiefur.misc.ManualResetEvent;
 import readiefur.misc.Pair;
@@ -23,8 +24,6 @@ import readiefur.sockets.ServerManager;
 
 public class ChatManager implements IDisposable
 {
-    private final ManualResetEvent exitEvent = new ManualResetEvent(false);
-
     //"Constant" properties (doesn't change between calling Restart()).
     private String fallbackServerIPAddress;
     private int port;
@@ -36,7 +35,7 @@ public class ChatManager implements IDisposable
 
     //Client specific properties.
     private Client client = null;
-    private UUID clientID = null;
+    private UUID id = null;
 
     //Shared properties.
     private Boolean isHost = true;
@@ -85,15 +84,15 @@ public class ChatManager implements IDisposable
             client.Dispose();
             client = null;
         }
-        clientID = null;
 
         //Shared.
+        id = null;
         peers.clear();
     }
 
     private void Restart()
     {
-        UUID oldClientID = clientID;
+        UUID oldClientID = id;
         List<Peer> oldPeers = new ArrayList<>(peers.values());
 
         Cleanup();
@@ -132,7 +131,11 @@ public class ChatManager implements IDisposable
             hostAddress = fallbackServerIPAddress;
 
         //If a host was not found, begin hosting.
-        if (hostAddress == null)
+        isHost = hostAddress == null;
+
+        Logger.Info("[CHAT_MANAGER] Promoted to " + (isHost ? "host" : "client") + ".");
+
+        if (isHost)
         {
             //Start the server.
             serverManager = new ServerManager(port);
@@ -141,7 +144,6 @@ public class ChatManager implements IDisposable
             serverManager.onClose.Add(this::OnNetClose);
             serverManager.onError.Add(this::OnNetError);
 
-            isHost = true;
             try
             {
                 Peer serverPeer = new Peer(ServerManager.SERVER_UUID, Inet4Address.getLocalHost().getHostAddress());
@@ -168,8 +170,6 @@ public class ChatManager implements IDisposable
             client.onClose.Add(nul -> OnNetClose(null));
             client.onError.Add(error -> OnNetError(new Pair<>(null, error)));
 
-            isHost = false;
-
             client.start();
         }
     }
@@ -178,16 +178,16 @@ public class ChatManager implements IDisposable
     {
         ManualResetEvent resetEvent = new ManualResetEvent(false);
 
-        Client client = new Client(ipAddress, port);
-        client.onConnect.Add(nul -> resetEvent.Set());
-        client.start();
+        Client dummyClient = new Client(ipAddress, port);
+        dummyClient.onConnect.Add(nul -> resetEvent.Set());
+        dummyClient.start();
 
         try { resetEvent.WaitOne(1000); }
         catch (TimeoutException e) {}
 
-        Boolean hostFound = client.IsConnected();
+        Boolean hostFound = dummyClient.IsConnected();
 
-        client.Dispose();
+        dummyClient.Dispose();
 
         return hostFound;
     }
@@ -206,7 +206,6 @@ public class ChatManager implements IDisposable
             //Send the handshake.
             NetMessage<Peer> message = new NetMessage<>();
             message.type = EType.HANDSHAKE;
-            //TODO: Client username.
             message.payload = new Peer(desiredUsername);
             client.SendMessage(message);
         }
@@ -253,7 +252,8 @@ public class ChatManager implements IDisposable
                     peer.nickname = nickname;
                     peer.SetIsReady();
 
-                    System.out.println("[SERVER] Client connected: " + data.item1 + " (" + peer.nickname + ")");
+                    Logger.Debug(GetLogPrefix() + "Client connected: " + data.item1 + " (" + peer.nickname + ")");
+                    Logger.Info(GetLogPrefix() + "Client connected: " + peer.nickname);
 
                     //Return the server-validated handshake data back to the client.
                     NetMessage<Peer> response = new NetMessage<>();
@@ -286,9 +286,9 @@ public class ChatManager implements IDisposable
                 case HANDSHAKE:
                 {
                     Peer inPayload = (Peer)netMessage.payload;
-                    clientID = inPayload.GetUUID();
+                    id = inPayload.GetUUID();
 
-                    System.out.println("[CLIENT] Connected to server.");
+                    Logger.Info(GetLogPrefix() + "Connected to server.");
 
                     //Occurs when the handshake has been acknowledged by the server.
                     //Request a list of peers.
@@ -337,12 +337,17 @@ public class ChatManager implements IDisposable
 
             //Client has disconnected.
             if (peers.get(uuid).GetIsReady())
-                System.out.println("[SERVER] Client disconnected: " + uuid + "");
+            {
+                String nickname = peers.get(uuid).nickname;
+                Logger.Debug(GetLogPrefix() + "Client disconnected: " + uuid + " (" + nickname + ")");
+                Logger.Info(GetLogPrefix() + "Client disconnected: " + nickname);
+            }
+
             peers.remove(uuid);
         }
         else
         {
-            System.out.println("[CLIENT] Disconnected from server.");
+            Logger.Info(GetLogPrefix() + "Disconnected from server.");
             Restart();
         }
     }
@@ -358,16 +363,21 @@ public class ChatManager implements IDisposable
                 Restart();
                 return;
             }
-            System.out.println("[SERVER | ERROR] " + error.item2.getMessage());
         }
         else
         {
-            System.out.println("[CLIENT | ERROR] " + error.item2.getMessage());
         }
+
+        Logger.Error(GetLogPrefix() + error.item2.getMessage());
     }
 
     private Collection<Peer> GetReadyPeers()
     {
         return peers.values().stream().filter(Peer::GetIsReady).collect(Collectors.toList());
+    }
+
+    private String GetLogPrefix()
+    {
+        return "[" + (isHost ? "SERVER" : "CLIENT") + "] ";
     }
 }

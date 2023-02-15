@@ -21,7 +21,7 @@ public class App
         throws IllegalArgumentException, IllegalAccessException, IOException, ParserConfigurationException, SAXException, InvalidXMLException
     {
         //#region Initialize the console log manager.
-        // Logger.ConfigureConsole();
+        Logger.ConfigureConsole();
         Logger.logLevel = ELogLevel.TRACE;
         //#endregion
 
@@ -95,24 +95,25 @@ public class App
         chatManager.Begin();
         //#endregion
 
-        //#region Create the chat UI.
-        Logger.Trace("Starting chat UI...");
+        //TODO: Uncomment all of the below after testing is complete.
+        // //#region Create the chat UI.
+        // Logger.Trace("Starting chat UI...");
 
-        /*I will let this method throw exceptions as any that may occur at this level are critical
-         *and my console log manager will format the exception appropriately and then print it to the console,
-         *at which point the program will exit with an unsuccessful code.*/
-        ChatUI chatUI = new ChatUI(chatManager);
+        // /*I will let this method throw exceptions as any that may occur at this level are critical
+        //  *and my console log manager will format the exception appropriately and then print it to the console,
+        //  *at which point the program will exit with an unsuccessful code.*/
+        // ChatUI chatUI = new ChatUI(chatManager);
 
-        Logger.Debug("Program started.");
+        // Logger.Debug("Program started.");
 
-        //This method will show the UI and block the current thread until the UI is closed.
-        chatUI.ShowDialog();
-        //#endregion
+        // //This method will show the UI and block the current thread until the UI is closed.
+        // chatUI.ShowDialog();
+        // //#endregion
 
-        //#region Cleanup.
-        Logger.Debug("Exiting...");
+        // //#region Cleanup.
+        // Logger.Debug("Exiting...");
 
-        chatManager.Dispose();
-        //#endregion
+        // chatManager.Dispose();
+        // //#endregion
     }
 }
