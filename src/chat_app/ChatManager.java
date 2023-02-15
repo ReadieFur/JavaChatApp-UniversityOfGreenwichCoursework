@@ -146,18 +146,16 @@ public class ChatManager implements IDisposable
             serverManager.onClose.Add(this::OnNetClose);
             serverManager.onError.Add(this::OnNetError);
 
-            try
-            {
-                //TODO: Store server peers in the array once the rest of the code is updated and tested.
-                //(I believe this may have been the culprit for the program breaking before).
-                Peer serverPeer = ServerPeer.ToPeer(
-                    new ServerPeer(ServerManager.SERVER_UUID, Inet4Address.getLocalHost().getHostAddress(), desiredUsername, EPeerStatus.UNINITIALIZED));
-                peers.put(ServerManager.SERVER_UUID, serverPeer);
-            }
-            catch (UnknownHostException e)
-            {
-                //TODO: Handle invalid host address.
-            }
+            String serverAddress;
+            try { serverAddress = Inet4Address.getLocalHost().getHostAddress(); }
+            catch (UnknownHostException e) { serverAddress = fallbackServerIPAddress; }
+
+            Peer serverPeer = new ServerPeer(
+                ServerManager.SERVER_UUID,
+                serverAddress,
+                desiredUsername,
+                EPeerStatus.CONNECTED);
+            peers.put(ServerManager.SERVER_UUID, serverPeer);
 
             serverManager.start();
             Logger.Trace(GetLogPrefix() + "Server started.");
@@ -172,10 +170,10 @@ public class ChatManager implements IDisposable
 
             //Connect to the server.
             client = new Client(hostAddress, port);
-            client.onConnect.Add(nul -> OnNetConnect(null));
-            client.onMessage.Add(data -> OnNetMessage(new Pair<>(null, data)));
-            client.onClose.Add(nul -> OnNetClose(null));
-            client.onError.Add(error -> OnNetError(new Pair<>(null, error)));
+            client.onConnect.Add(nul -> OnNetConnect(ServerManager.SERVER_UUID));
+            client.onMessage.Add(data -> OnNetMessage(new Pair<>(ServerManager.SERVER_UUID, data)));
+            client.onClose.Add(nul -> OnNetClose(ServerManager.SERVER_UUID));
+            client.onError.Add(error -> OnNetError(new Pair<>(ServerManager.SERVER_UUID, error)));
 
             client.start();
             Logger.Trace(GetLogPrefix() + "Client started.");
@@ -213,8 +211,7 @@ public class ChatManager implements IDisposable
         {
             /*When a new client connects, we add them to the list of peers however we don't,
              *indicate that the client is ready yet, we must wait for the handshake first.*/
-            // peers.put(uuid, new Peer(uuid, serverManager.GetClientHosts().get(uuid).GetSocket().getInetAddress().getHostAddress()));
-            peers.put(uuid, ServerPeer.ToPeer(new ServerPeer(uuid, fallbackServerIPAddress, desiredUsername, EPeerStatus.UNINITIALIZED)));
+            peers.put(uuid, new ServerPeer(uuid, fallbackServerIPAddress, desiredUsername, EPeerStatus.UNINITIALIZED));
         }
         else
         {
@@ -288,7 +285,7 @@ public class ChatManager implements IDisposable
                     NetMessage<PeersPayload> response = new NetMessage<>();
                     response.type = EType.PEERS;
                     response.payload = new PeersPayload();
-                    response.payload.peers = GetReadyPeers().toArray(new Peer[peers.size()]);
+                    response.payload.peers = GetReadyPeers();
                     serverManager.SendMessage(data.item1, response);
                     break;
                 }
@@ -389,15 +386,24 @@ public class ChatManager implements IDisposable
         {
         }
 
-        Logger.Error(GetLogPrefix() + error.item2.getMessage());
+        Logger.Error(GetLogPrefix() + "Error in connection: " + error.item1 + " | " + error.item2.getMessage());
     }
 
-    private Collection<Peer> GetReadyPeers()
+    private Peer[] GetReadyPeers()
     {
-        return peers.values()
-            .stream()
-            .filter(p -> p.status == EPeerStatus.CONNECTED)
-            .collect(Collectors.toList());
+        List<Peer> readyPeers = new ArrayList<>();
+        for (Peer peer : peers.values())
+        {
+            if (peer.GetStatus() != EPeerStatus.CONNECTED)
+                continue;
+
+            if (peer instanceof ServerPeer)
+                readyPeers.add(ServerPeer.ToPeer((ServerPeer)peer));
+            else
+                readyPeers.add(peer);
+        }
+
+        return readyPeers.toArray(new Peer[readyPeers.size()]);
     }
 
     private String GetLogPrefix()
