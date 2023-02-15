@@ -92,6 +92,8 @@ public class ChatManager implements IDisposable
 
     private void Restart()
     {
+        Logger.Trace("Restarting...");
+
         UUID oldClientID = id;
         List<Peer> oldPeers = new ArrayList<>(peers.values());
 
@@ -132,11 +134,10 @@ public class ChatManager implements IDisposable
 
         //If a host was not found, begin hosting.
         isHost = hostAddress == null;
-
-        Logger.Info("[CHAT_MANAGER] Promoted to " + (isHost ? "host" : "client") + ".");
-
         if (isHost)
         {
+            Logger.Trace("No host found, starting server...");
+
             //Start the server.
             serverManager = new ServerManager(port);
             serverManager.onConnect.Add(this::OnNetConnect);
@@ -157,12 +158,16 @@ public class ChatManager implements IDisposable
             }
 
             serverManager.start();
+            Logger.Trace(GetLogPrefix() + "Server started.");
 
             pingPong = new PingPong(serverManager);
             pingPong.start();
+            Logger.Trace(GetLogPrefix() + "PingPong started.");
         }
         else
         {
+            Logger.Trace("Host found at " + hostAddress + ":" + port + ". Connecting...");
+
             //Connect to the server.
             client = new Client(hostAddress, port);
             client.onConnect.Add(nul -> OnNetConnect(null));
@@ -171,11 +176,16 @@ public class ChatManager implements IDisposable
             client.onError.Add(error -> OnNetError(new Pair<>(null, error)));
 
             client.start();
+            Logger.Trace(GetLogPrefix() + "Client started.");
         }
+
+        Logger.Info("[CHAT_MANAGER] Promoted to " + (isHost ? "host" : "client") + ".");
     }
 
     private Boolean FindHost(String ipAddress, int port)
     {
+        Logger.Trace("Looking for host at " + ipAddress + ":" + port + "...");
+
         ManualResetEvent resetEvent = new ManualResetEvent(false);
 
         Client dummyClient = new Client(ipAddress, port);
@@ -195,6 +205,8 @@ public class ChatManager implements IDisposable
     //UUIDs are null for client connections.
     private void OnNetConnect(UUID uuid)
     {
+        Logger.Trace(GetLogPrefix() + "Connection opened: " + uuid);
+
         if (isHost)
         {
             /*When a new client connects, we add them to the list of peers however we don't,
@@ -215,6 +227,11 @@ public class ChatManager implements IDisposable
     {
         NetMessage<?> netMessage = (NetMessage<?>)data.item2;
 
+        if (netMessage.type == EType.PING || netMessage.type == EType.PONG)
+            Logger.Trace(GetLogPrefix() + "PingPong received from: " + data.item1);
+        else
+            Logger.Trace(GetLogPrefix() + "Message received from: " + data.item1);
+
         if (isHost)
         {
             switch (netMessage.type)
@@ -227,8 +244,8 @@ public class ChatManager implements IDisposable
                     String nickname = inPayload.nickname == null || inPayload.nickname.isBlank() ? "Anonymous" : inPayload.nickname;
                     int duplicateCount = 0;
 
-                    //Check for duplicate nicknames.
-                    //(This could've been done ine like 2 lines in C# but Java's inability to pass local variables makes it a bit more complicated).
+                    /*Check for duplicate nicknames.
+                     *(This could've been done ine like 2 lines in C# but Java's inability to pass local variables makes it a bit more complicated).*/
                     while (true)
                     {
                         boolean duplicateFound = false;
@@ -329,6 +346,8 @@ public class ChatManager implements IDisposable
 
     private void OnNetClose(UUID uuid)
     {
+        Logger.Trace(GetLogPrefix() + "Connection closed: " + uuid);
+
         if (isHost)
         {
             //Server has closed, handled in OnNetError.
