@@ -21,25 +21,6 @@ public class MessageBox extends XMLUI<Window>
 {
     //#region Static
     /**
-     * Shows a message box with the specified title, header and message.
-     * @param title
-     * @param header
-     * @param message
-     */
-    public static void Show(String title, String header, String message)
-    {
-        try
-        {
-            MessageBox messageBox = new MessageBox(title, header, message, EMessageBoxButtons.OK);
-            messageBox.Show();
-        }
-        catch (Exception e)
-        {
-            System.err.println("Failed to show message box: " + e.getMessage());
-        }
-    }
-
-    /**
      * Shows a message box with the specified title, header, message and buttons and waits for the user to close the message box.
      * @param title
      * @param header
@@ -47,7 +28,7 @@ public class MessageBox extends XMLUI<Window>
      * @param buttons {@link ui.EMessageBoxButtons}
      * @return The button that was clicked {@link ui.EMessageBoxButtons}
      */
-    public static int ShowDialog(String title, String header, String message, int buttons)
+    public static int Show(String title, String header, String message, int buttons)
     {
         try
         {
@@ -89,6 +70,8 @@ public class MessageBox extends XMLUI<Window>
     {
         super();
 
+        rootComponent.setAlwaysOnTop(true);
+
         rootComponent.SetTitle(title);
         this.header.setText(header);
         this.message.setText(message);
@@ -111,12 +94,7 @@ public class MessageBox extends XMLUI<Window>
         rootComponent.pack();
     }
 
-    public void Show()
-    {
-        rootComponent.Show();
-    }
-
-    public void ShowDialog()
+    protected void ShowDialog()
     {
         rootComponent.ShowDialog();
     }

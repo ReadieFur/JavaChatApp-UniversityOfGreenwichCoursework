@@ -15,12 +15,13 @@ import chat_app.net_data.EType;
 import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import chat_app.net_data.PeersPayload;
+import readiefur.misc.IDisposable;
 import readiefur.misc.ManualResetEvent;
 import readiefur.misc.Pair;
 import readiefur.sockets.Client;
 import readiefur.sockets.ServerManager;
 
-public class ChatManager
+public class ChatManager implements IDisposable
 {
     private final ManualResetEvent exitEvent = new ManualResetEvent(false);
 
@@ -48,16 +49,20 @@ public class ChatManager
         this.desiredUsername = desiredUsername; //If null, will be resolved to "Anonymous" later on.
     }
 
-    //This is a blocking method that will not return until the application is closed.
+    @Override
+    public void Dispose()
+    {
+        Cleanup();
+    }
+
+    /**
+     * Starts the chat manager.
+     * Does not block the current thread.
+     */
     public void Begin()
     {
         //Start the manager.
         Restart();
-
-        //Wait indefinitely until signaled to exit.
-        exitEvent.WaitOne();
-
-        Cleanup();
     }
 
     private void Cleanup()

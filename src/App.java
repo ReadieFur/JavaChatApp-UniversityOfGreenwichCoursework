@@ -61,7 +61,7 @@ public class App
             .matches())
         {
             Logger.Critical("Invalid IP address: " + initialServerAddress);
-            MessageBox.ShowDialog(
+            MessageBox.Show(
                 "Chat App | Error",
                 "Invalid IP address",
                 "The IP address you have entered is invalid.",
@@ -72,7 +72,7 @@ public class App
         if (port < 0 || port > 65535)
         {
             Logger.Critical("Invalid port: " + port);
-            MessageBox.ShowDialog(
+            MessageBox.Show(
                 "Chat App | Error",
                 "Invalid port",
                 "The port you have entered is invalid.",
@@ -83,7 +83,7 @@ public class App
         if (username == null || username.isBlank())
         {
             Logger.Critical("Invalid username: " + username);
-            MessageBox.ShowDialog(
+            MessageBox.Show(
                 "Chat App | Error",
                 "Invalid username",
                 "The username you have entered is invalid.",
@@ -99,6 +99,10 @@ public class App
 
         //#region Create the chat UI.
         //TODO: Create the chat ui.
+        //#endregion
+
+        //#region Cleanup.
+        // chatManager.Dispose();
         //#endregion
     }
 }
