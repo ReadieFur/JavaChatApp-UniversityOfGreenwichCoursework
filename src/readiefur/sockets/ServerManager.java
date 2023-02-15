@@ -6,9 +6,9 @@ import java.net.Socket;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import readiefur.helpers.Event;
-import readiefur.helpers.IDisposable;
-import readiefur.helpers.KeyValuePair;
+import readiefur.misc.Event;
+import readiefur.misc.IDisposable;
+import readiefur.misc.Pair;
 
 //This is taking inspiration from my CSharpTools.Pipes project as the way Java handles networking is similar: https://github.com/ReadieFur/CSharpTools/blob/main/src/CSharpTools.Pipes
 public class ServerManager extends Thread implements IDisposable
@@ -26,9 +26,9 @@ public class ServerManager extends Thread implements IDisposable
     /*You will also notice that I haven't fully capitalized these variables as while they are "constant",
      *(not a primitive, known, type at compile time so they're not really), I am using it as a readonly modifier.*/
     public final Event<UUID> onConnect = new Event<>();
-    public final Event<KeyValuePair<UUID, Object>> onMessage = new Event<>();
+    public final Event<Pair<UUID, Object>> onMessage = new Event<>();
     public final Event<UUID> onClose = new Event<>();
-    public final Event<KeyValuePair<UUID, Exception>> onError = new Event<>();
+    public final Event<Pair<UUID, Exception>> onError = new Event<>();
 
     public ServerManager(int port)
     {
@@ -48,7 +48,7 @@ public class ServerManager extends Thread implements IDisposable
             for (ServerClientHost serverClientHost : servers.values())
             {
                 try { serverClientHost.Dispose(); }
-                catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+                catch (Exception ex) { onError.Invoke(new Pair<>(SERVER_UUID, ex)); }
             }
             servers.clear();
 
@@ -56,7 +56,7 @@ public class ServerManager extends Thread implements IDisposable
             if (server != null)
             {
                 try { server.close(); }
-                catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+                catch (Exception ex) { onError.Invoke(new Pair<>(SERVER_UUID, ex)); }
                 server = null;
             }
 
@@ -64,7 +64,7 @@ public class ServerManager extends Thread implements IDisposable
             if (this.isAlive())
             {
                 try { this.interrupt(); }
-                catch (Exception ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+                catch (Exception ex) { onError.Invoke(new Pair<>(SERVER_UUID, ex)); }
             }
 
             //Clear the list of clients.
@@ -97,7 +97,7 @@ public class ServerManager extends Thread implements IDisposable
                     if (servers.putIfAbsent(uuid, serverClientHost) != null)
                     {
                         socket.close();
-                        onError.Invoke(new KeyValuePair<>(SERVER_UUID, new Exception("Failed to add client to list.")));
+                        onError.Invoke(new Pair<>(SERVER_UUID, new Exception("Failed to add client to list.")));
                     }
 
                     //We manually fire this event as the constructor for the ServerClientHost class starts the thread immediately and so the registration of the event could be missed.
@@ -115,11 +115,11 @@ public class ServerManager extends Thread implements IDisposable
                 {
                     if (isDisposed || server == null || server.isClosed())
                         break;
-                    onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex));
+                    onError.Invoke(new Pair<>(SERVER_UUID, ex));
                 }
             }
         }
-        catch (IOException ex) { onError.Invoke(new KeyValuePair<>(SERVER_UUID, ex)); }
+        catch (IOException ex) { onError.Invoke(new Pair<>(SERVER_UUID, ex)); }
 
         /*In my previous tests I had this close the connection and thread as opposed to disposing of the this instance.
          *The reason I don't do this anymore is because after a quick look, I found you cannot reuse threads in java.
@@ -148,7 +148,7 @@ public class ServerManager extends Thread implements IDisposable
 
     private void OnMessage(UUID uuid, Object data)
     {
-        onMessage.Invoke(new KeyValuePair<>(uuid, data));
+        onMessage.Invoke(new Pair<>(uuid, data));
     }
 
     private void OnClose(UUID uuid)
@@ -160,7 +160,7 @@ public class ServerManager extends Thread implements IDisposable
 
     private void OnError(UUID uuid, Exception ex)
     {
-        onError.Invoke(new KeyValuePair<>(uuid, ex));
+        onError.Invoke(new Pair<>(uuid, ex));
     }
 
     //A NullPointerException can occur if the guid is not found or a race condition occurs.

@@ -10,13 +10,14 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.xml.sax.SAXException;
 
 import readiefur.xml_ui.Observable;
+import readiefur.xml_ui.XMLUI;
 import readiefur.xml_ui.attributes.BindingAttribute;
 import readiefur.xml_ui.attributes.EventCallbackAttribute;
 import readiefur.xml_ui.attributes.NamedComponentAttribute;
 import readiefur.xml_ui.controls.Window;
 import readiefur.xml_ui.exceptions.InvalidXMLException;
 
-public class MessageBox extends Window
+public class MessageBox extends XMLUI<Window>
 {
     //#region Static
     /**
@@ -88,7 +89,7 @@ public class MessageBox extends Window
     {
         super();
 
-        Window.SetTitle(rootComponent, title);
+        rootComponent.SetTitle(title);
         this.header.setText(header);
         this.message.setText(message);
 
@@ -108,6 +109,16 @@ public class MessageBox extends Window
             this.message.getFont().getSize()));
 
         rootComponent.pack();
+    }
+
+    public void Show()
+    {
+        rootComponent.Show();
+    }
+
+    public void ShowDialog()
+    {
+        rootComponent.ShowDialog();
     }
 
     @EventCallbackAttribute

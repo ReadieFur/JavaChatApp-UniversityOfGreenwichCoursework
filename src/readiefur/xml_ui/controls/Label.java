@@ -1,41 +1,42 @@
 package readiefur.xml_ui.controls;
 
-import java.awt.Color;
-
 import javax.swing.JLabel;
 
-import readiefur.xml_ui.attributes.CreateComponentAttribute;
 import readiefur.xml_ui.attributes.SetterAttribute;
+import readiefur.xml_ui.exceptions.InvalidXMLException;
 
-/**
- * Converts an XML {@code Label} component into a {@link javax.swing.JLabel} component.
- */
-public class Label
+public class Label extends JLabel
 {
-    private Label(){}
-
-    @CreateComponentAttribute
-    public static JLabel Create()
+    public Label()
     {
-        return new JLabel();
+        super();
     }
 
     @SetterAttribute("Text")
-    public static void SetText(JLabel label, String text)
+    public void SetText(String text)
     {
-        label.setText(text);
+        setText(text);
     }
 
-    @SetterAttribute("Background")
-    public static void SetBackground(JLabel label, String colour)
+    /**
+     * If the element is inside of a grid then the default alignment will be the HorizontalAlignment of the grid.
+     */
+    @SetterAttribute("Alignment")
+    public void SetAlignment(String alignment) throws InvalidXMLException
     {
-        label.setOpaque(true);
-        label.setBackground(Color.decode(colour));
-    }
-
-    @SetterAttribute("Foreground")
-    public static void SetForeground(JLabel label, String colour)
-    {
-        label.setForeground(Color.decode(colour));
+        switch (alignment)
+        {
+            case "Left":
+                setHorizontalAlignment(LEFT);
+                break;
+            case "Center":
+                setHorizontalAlignment(CENTER);
+                break;
+            case "Right":
+                setHorizontalAlignment(RIGHT);
+                break;
+            default:
+                throw new InvalidXMLException("Invalid alignment '" + alignment + "'.");
+        }
     }
 }

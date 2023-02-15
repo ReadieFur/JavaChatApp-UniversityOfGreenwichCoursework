@@ -1,5 +1,5 @@
 <Window
-    xmlns="xml_ui.controls"
+    xmlns="readiefur.xml_ui.controls"
     MinWidth="300" MinHeight="150"
     Resizable="false"
     Background="{Binding backgroundColour}">

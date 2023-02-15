@@ -25,14 +25,21 @@ import readiefur.xml_ui.attributes.EventCallbackAttribute;
 import readiefur.xml_ui.attributes.NamedComponentAttribute;
 import readiefur.xml_ui.exceptions.InvalidXMLException;
 import readiefur.xml_ui.factory.UIBuilderFactory;
+import readiefur.xml_ui.interfaces.IRootComponent;
 
-public class XMLRootComponent<TRootComponent extends Component>
+/**
+ * The base class for all XMLUI classes.
+ * @param <TRootComponent> The type of the root component.
+ */
+public class XMLUI<TRootComponent extends Component & IRootComponent>
 {
     private final Map<String, Component> namedComponents;
 
-    protected TRootComponent rootComponent;
+    /*Originally I had this as a protected field however there isn't too much point in that because it would be
+     *restricting more than it's worth and in Java you can't hide fields like in C# how you can with the new keyword.*/
+    public final TRootComponent rootComponent;
 
-    protected XMLRootComponent() throws IOException, ParserConfigurationException, SAXException, InvalidXMLException, IllegalArgumentException, IllegalAccessException
+    protected XMLUI() throws IOException, ParserConfigurationException, SAXException, InvalidXMLException, IllegalArgumentException, IllegalAccessException
     {
         Map<String, String> xmlNamespaces = new HashMap<>();
         Map<String, String> resources = new HashMap<>();
@@ -90,12 +97,6 @@ public class XMLRootComponent<TRootComponent extends Component>
                 xmlNamespaces.put(namespaceName, namespaceValue);
             }
         }
-        //#endregion
-
-        //#region Verify that the root XML component can be used as a root component
-        Class<?> xmlComponentClass = Helpers.GetClassForXMLComponent(xmlRootElement, xmlNamespaces);
-        if (!XMLRootComponent.class.isAssignableFrom(xmlComponentClass))
-            throw new InvalidXMLException("The root XML component '" + xmlComponentClass.getCanonicalName() + "' cannot be used as a root component.");
         //#endregion
 
         //#region Get the resources

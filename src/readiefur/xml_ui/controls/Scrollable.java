@@ -7,56 +7,48 @@ import javax.swing.JScrollPane;
 import org.w3c.dom.Node;
 
 import readiefur.xml_ui.attributes.ChildBuilderAttribute;
-import readiefur.xml_ui.attributes.CreateComponentAttribute;
 import readiefur.xml_ui.attributes.SetterAttribute;
 import readiefur.xml_ui.exceptions.InvalidXMLException;
 import readiefur.xml_ui.factory.UIBuilderFactory;
 
-/**
- * Converts an XML {@code Scrollable} component into a {@link javax.swing.JScrollPane} component.
- */
-public class Scrollable
+public class Scrollable extends JScrollPane
 {
-    private Scrollable(){}
+    private Boolean addedChild = false;
 
-    @CreateComponentAttribute
-    public static JScrollPane Create()
+    public Scrollable()
     {
-        JScrollPane scrollPane = new JScrollPane();
+        super();
 
         //Default scroll policy.
-        SetHorizontalScroll(scrollPane, "Never");
-        SetVerticalScroll(scrollPane, "AsNeeded");
-
-        return scrollPane;
+        SetHorizontalScroll("Never");
+        SetVerticalScroll("AsNeeded");
     }
 
     @SetterAttribute("HorizontalScroll")
-    public static void SetHorizontalScroll(JScrollPane scrollPane, String scroll)
+    public void SetHorizontalScroll(String scroll)
     {
         if (scroll.equals("Always"))
-            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+            setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
         else if (scroll.equals("Never"))
-            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+            setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         else if (scroll.equals("AsNeeded"))
-            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+            setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
     }
 
     @SetterAttribute("VerticalScroll")
-    public static void SetVerticalScroll(JScrollPane scrollPane, String scroll)
+    public void SetVerticalScroll(String scroll)
     {
         if (scroll.equals("Always"))
-            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+            setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         else if (scroll.equals("Never"))
-            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
+            setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_NEVER);
         else if (scroll.equals("AsNeeded"))
-            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+            setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
     }
 
     @ChildBuilderAttribute
-    public static void AddChild(UIBuilderFactory builder, JScrollPane scrollPane, List<Node> children) throws InvalidXMLException
+    public void AddChild(UIBuilderFactory builder, List<Node> children) throws InvalidXMLException
     {
-        Boolean addedChild = false;
         for (Node child : children)
         {
             //A window can only have one child.
@@ -68,8 +60,14 @@ public class Scrollable
                 continue;
 
             //Add the child to the window.
-            scrollPane.setViewportView(builder.ParseXMLNode(child));
+            setViewportView(builder.ParseXMLNode(child));
             addedChild = true;
         }
+    }
+
+    public void RemoveChild()
+    {
+        setViewportView(null);
+        addedChild = false;
     }
 }

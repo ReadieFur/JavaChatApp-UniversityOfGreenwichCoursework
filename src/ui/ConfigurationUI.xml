@@ -1,5 +1,5 @@
 <Window
-    xmlns="xml_ui.controls"
+    xmlns="readiefur.xml_ui.controls"
     Title="Chat App | Configuration"
     MinWidth="350" MinHeight="200"
     Resizable="false"

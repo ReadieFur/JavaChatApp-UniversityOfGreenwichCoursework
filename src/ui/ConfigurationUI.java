@@ -8,13 +8,14 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.xml.sax.SAXException;
 
 import readiefur.xml_ui.Observable;
+import readiefur.xml_ui.XMLUI;
 import readiefur.xml_ui.attributes.BindingAttribute;
 import readiefur.xml_ui.attributes.EventCallbackAttribute;
 import readiefur.xml_ui.attributes.NamedComponentAttribute;
 import readiefur.xml_ui.controls.Window;
 import readiefur.xml_ui.exceptions.InvalidXMLException;
 
-public class ConfigurationUI extends Window
+public class ConfigurationUI extends XMLUI<Window>
 {
     @NamedComponentAttribute
     private JTextField serverAddress;
@@ -51,6 +52,16 @@ public class ConfigurationUI extends Window
         serverAddress.setText(defaultServerAddress);
         port.setText(Integer.toString(defaultPort));
         username.setText(defaultUsername);
+    }
+
+    public void Show()
+    {
+        rootComponent.Show();
+    }
+
+    public void ShowDialog()
+    {
+        rootComponent.ShowDialog();
     }
 
     public String GetServerAddress()

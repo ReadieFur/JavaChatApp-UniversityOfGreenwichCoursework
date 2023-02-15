@@ -15,8 +15,8 @@ import chat_app.net_data.EType;
 import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
 import chat_app.net_data.PeersPayload;
-import readiefur.helpers.KeyValuePair;
-import readiefur.helpers.ManualResetEvent;
+import readiefur.misc.ManualResetEvent;
+import readiefur.misc.Pair;
 import readiefur.sockets.Client;
 import readiefur.sockets.ServerManager;
 
@@ -159,9 +159,9 @@ public class ChatManager
             //Connect to the server.
             client = new Client(hostAddress, port);
             client.onConnect.Add(nul -> OnNetConnect(null));
-            client.onMessage.Add(data -> OnNetMessage(new KeyValuePair<>(null, data)));
+            client.onMessage.Add(data -> OnNetMessage(new Pair<>(null, data)));
             client.onClose.Add(nul -> OnNetClose(null));
-            client.onError.Add(error -> OnNetError(new KeyValuePair<>(null, error)));
+            client.onError.Add(error -> OnNetError(new Pair<>(null, error)));
 
             isHost = false;
 
@@ -207,9 +207,9 @@ public class ChatManager
         }
     }
 
-    private void OnNetMessage(KeyValuePair<UUID, Object> data)
+    private void OnNetMessage(Pair<UUID, Object> data)
     {
-        NetMessage<?> netMessage = (NetMessage<?>)data.GetValue();
+        NetMessage<?> netMessage = (NetMessage<?>)data.item2;
 
         if (isHost)
         {
@@ -244,17 +244,17 @@ public class ChatManager
                     }
 
                     //Indicate that the client is ready.
-                    Peer peer = peers.get(data.GetKey());
+                    Peer peer = peers.get(data.item1);
                     peer.nickname = nickname;
                     peer.SetIsReady();
 
-                    System.out.println("[SERVER] Client connected: " + data.GetKey() + " (" + peer.nickname + ")");
+                    System.out.println("[SERVER] Client connected: " + data.item1 + " (" + peer.nickname + ")");
 
                     //Return the server-validated handshake data back to the client.
                     NetMessage<Peer> response = new NetMessage<>();
                     response.type = EType.HANDSHAKE;
                     response.payload = peer;
-                    serverManager.SendMessage(data.GetKey(), response);
+                    serverManager.SendMessage(data.item1, response);
                     break;
                 }
                 case PEERS:
@@ -264,7 +264,7 @@ public class ChatManager
                     response.type = EType.PEERS;
                     response.payload = new PeersPayload();
                     response.payload.peers = GetReadyPeers().toArray(new Peer[peers.size()]);
-                    serverManager.SendMessage(data.GetKey(), response);
+                    serverManager.SendMessage(data.item1, response);
                     break;
                 }
                 default:
@@ -342,22 +342,22 @@ public class ChatManager
         }
     }
 
-    private void OnNetError(KeyValuePair<UUID, Exception> error)
+    private void OnNetError(Pair<UUID, Exception> error)
     {
         if (isHost)
         {
-            if (error.GetValue() instanceof BindException)
+            if (error.item2 instanceof BindException)
             {
                 /*A bind error can occur when another server is already running on the same port
                  *if this happens, assume another server instance is running.*/
                 Restart();
                 return;
             }
-            System.out.println("[SERVER | ERROR] " + error.GetValue().getMessage());
+            System.out.println("[SERVER | ERROR] " + error.item2.getMessage());
         }
         else
         {
-            System.out.println("[CLIENT | ERROR] " + error.GetValue().getMessage());
+            System.out.println("[CLIENT | ERROR] " + error.item2.getMessage());
         }
     }
 

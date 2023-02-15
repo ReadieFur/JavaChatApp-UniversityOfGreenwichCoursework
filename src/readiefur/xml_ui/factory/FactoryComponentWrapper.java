@@ -2,6 +2,7 @@ package readiefur.xml_ui.factory;
 
 import java.awt.Component;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -14,20 +15,20 @@ import java.util.function.Consumer;
 import org.w3c.dom.Node;
 
 import readiefur.xml_ui.attributes.ChildBuilderAttribute;
-import readiefur.xml_ui.attributes.CreateComponentAttribute;
 import readiefur.xml_ui.attributes.EventAttribute;
 import readiefur.xml_ui.attributes.SetterAttribute;
+import readiefur.xml_ui.exceptions.InvalidXMLException;
 
 public class FactoryComponentWrapper
 {
-    private static Object InvokeMethod(Method method, Object... args)
+    private static Object InvokeMethod(Component instance, Method method, Object... args)
     {
         try
         {
             if (args.length == 0)
-                return method.invoke(null);
+                return method.invoke(instance);
             else
-                return method.invoke(null, args);
+                return method.invoke(instance, args);
         }
         catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex)
         {
@@ -36,36 +37,35 @@ public class FactoryComponentWrapper
         }
     }
 
-    private Method createComponentMethod; //Must be defined.
+    private Constructor<?> constructorMethod; //Must be defined.
     private Map<String, Method> setterMethods = new HashMap<>();
     private Map<String, Method> eventMethods = new HashMap<>();
     private Method childBuilderMethod = null; //Optional.
 
     public FactoryComponentWrapper(Class<?> cls)
     {
-        //We want to use public methods only for this.
-        for (Method method : cls.getMethods())
+        if (!Component.class.isAssignableFrom(cls))
+            throw new UnsupportedOperationException("The class '" + cls.getName() + "' does not extend Component.");
+
+        //Find a parameterless constructor on the class.
+        for (Constructor<?> constructor : cls.getDeclaredConstructors())
+        {
+            //Make sure that the method is parameterless.
+            if (constructor.getParameterCount() != 0)
+                continue;
+
+            //Set the constructor method.
+            constructor.setAccessible(true);
+            constructorMethod = constructor;
+        }
+        if (constructorMethod == null)
+            throw new UnsupportedOperationException("The class '" + cls.getName() + "' does not have a parameterless constructor.");
+
+        for (Method method : cls.getDeclaredMethods())
         {
             for (Annotation annotation : method.getAnnotations())
             {
-                if (annotation instanceof CreateComponentAttribute)
-                {
-                    //Make sure only one CreateComponent method exists.
-                    if (createComponentMethod != null)
-                        throw new UnsupportedOperationException("The class '" + cls.getName() + "' has multiple CreateComponent methods.");
-
-                    //Make sure that the method constrains to the requirements of ({@see CreateComponentAttribute}).
-                    final String exceptionPrefix = "The CreateComponent method in the class '" + cls.getName() + "' ";
-                    if (!Modifier.isStatic(method.getModifiers()))
-                        throw new UnsupportedOperationException(exceptionPrefix + "must be static.");
-                    else if (method.getParameterCount() != 0)
-                        throw new IllegalArgumentException(exceptionPrefix + "must take no parameters.");
-                    else if (!Component.class.isAssignableFrom(method.getReturnType()))
-                        throw new UnsupportedOperationException(exceptionPrefix + "must return a Component.");
-
-                    createComponentMethod = method;
-                }
-                else if (annotation instanceof SetterAttribute)
+                if (annotation instanceof SetterAttribute)
                 {
                     if (setterMethods.containsKey(((SetterAttribute)annotation).value()))
                         throw new UnsupportedOperationException(
@@ -73,16 +73,15 @@ public class FactoryComponentWrapper
 
                     //Make sure that the method constrains to the requirements of ({@see SetterAttribute}).
                     final String exceptionPrefix = "The Setter method in the class '" + cls.getName() + "' ";
-                    if (!Modifier.isStatic(method.getModifiers()))
-                        throw new UnsupportedOperationException(exceptionPrefix + "must be static.");
-                    else if (method.getParameterCount() != 2)
-                        throw new IllegalArgumentException(exceptionPrefix + "must take two parameters.");
-                    else if (!Component.class.isAssignableFrom(method.getParameterTypes()[0]))
-                        throw new IllegalArgumentException(exceptionPrefix + "must take a Component as it's first parameter.");
-                    else if (method.getParameterTypes()[1] != String.class)
-                        throw new IllegalArgumentException(exceptionPrefix + "must take a String as it's second parameter.");
+                    if (Modifier.isStatic(method.getModifiers()))
+                        throw new UnsupportedOperationException(exceptionPrefix + "must be instanced.");
+                    else if (method.getParameterCount() != 1)
+                        throw new IllegalArgumentException(exceptionPrefix + "must take one parameter.");
+                    else if (method.getParameterTypes()[0] != String.class)
+                        throw new IllegalArgumentException(exceptionPrefix + "must take a String as it's only parameter.");
 
                     //Add the method to the map.
+                    method.setAccessible(true);
                     setterMethods.put(((SetterAttribute)annotation).value(), method);
                 }
                 else if (annotation instanceof EventAttribute)
@@ -93,17 +92,16 @@ public class FactoryComponentWrapper
 
                     //Make sure that the method constrains to the requirements of ({@see EventAttribute}).
                     final String exceptionPrefix = "The Event method in the class '" + cls.getName() + "' ";
-                    if (!Modifier.isStatic(method.getModifiers()))
-                        throw new UnsupportedOperationException(exceptionPrefix + "must be static.");
-                    else if (method.getParameterCount() != 2)
-                        throw new IllegalArgumentException(exceptionPrefix + "must take two parameters.");
-                    else if (!Component.class.isAssignableFrom(method.getParameterTypes()[0]))
-                        throw new IllegalArgumentException(exceptionPrefix + "must take a Component as it's first parameter.");
-                    else if (method.getParameterTypes()[1] != Consumer.class)
-                        // || method.getParameterTypes()[1].getTypeParameters()[0] != Object[].class)
-                        throw new IllegalArgumentException(exceptionPrefix + "must take an Consumer<Object[]> as it's second parameter.");
+                    if (Modifier.isStatic(method.getModifiers()))
+                        throw new UnsupportedOperationException(exceptionPrefix + "must be instanced.");
+                    else if (method.getParameterCount() != 1)
+                        throw new IllegalArgumentException(exceptionPrefix + "must take one parameter.");
+                    else if (method.getParameterTypes()[0] != Consumer.class)
+                        // || method.getParameterTypes()[0].getTypeParameters()[0] != Object[].class)
+                        throw new IllegalArgumentException(exceptionPrefix + "must take an Consumer<Object[]> as it's only parameter.");
 
                     //Add the method to the map.
+                    method.setAccessible(true);
                     eventMethods.put(((EventAttribute)annotation).value(), method);
                 }
                 else if (annotation instanceof ChildBuilderAttribute)
@@ -114,29 +112,28 @@ public class FactoryComponentWrapper
 
                     //Make sure that the method constrains to the requirements of ({@see ChildBuilderAttribute}).
                     final String exceptionPrefix = "The ChildBuilder method in the class '" + cls.getName() + "' ";
-                    if (!Modifier.isStatic(method.getModifiers()))
-                        throw new UnsupportedOperationException(exceptionPrefix + "must be static.");
-                    else if (method.getParameterCount() != 3)
-                        throw new IllegalArgumentException(exceptionPrefix + "must take three parameters.");
+                    if (Modifier.isStatic(method.getModifiers()))
+                        throw new UnsupportedOperationException(exceptionPrefix + "must be instanced.");
+                    else if (method.getParameterCount() != 2)
+                        throw new IllegalArgumentException(exceptionPrefix + "must take two parameters.");
                     else if (method.getParameterTypes()[0] != UIBuilderFactory.class)
                         throw new IllegalArgumentException(exceptionPrefix + "must take a UIBuilderFactory as it's first parameter.");
-                    else if (!Component.class.isAssignableFrom(method.getParameterTypes()[1]))
-                        throw new IllegalArgumentException(exceptionPrefix + "must take a Component as it's second parameter.");
-                    else if (method.getParameterTypes()[2] != java.util.List.class)
-                        throw new IllegalArgumentException(exceptionPrefix + "must take a List<Node> as it's third parameter.");
+                    else if (method.getParameterTypes()[1] != java.util.List.class)
+                        throw new IllegalArgumentException(exceptionPrefix + "must take a List<Node> as it's second parameter.");
 
+                    method.setAccessible(true);
                     childBuilderMethod = method;
                 }
             }
         }
 
-        if (createComponentMethod == null)
+        if (constructorMethod == null)
             throw new UnsupportedOperationException("The class '" + cls.getName() + "' does not implement the CreateComponent method.");
     }
 
-    public Component CreateComponent()
+    public Component CreateComponent() throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
     {
-        return (Component)InvokeMethod(createComponentMethod);
+        return (Component)constructorMethod.newInstance();
     }
 
     public Set<String> GetSetterNames()
@@ -154,7 +151,7 @@ public class FactoryComponentWrapper
         if (!setterMethods.containsKey(name))
             return false;
 
-        InvokeMethod(setterMethods.get(name), component, value);
+        InvokeMethod(component, setterMethods.get(name), value);
         return true;
     }
 
@@ -163,15 +160,15 @@ public class FactoryComponentWrapper
         if (!eventMethods.containsKey(name))
             return false;
 
-        InvokeMethod(eventMethods.get(name), component, callback);
+        InvokeMethod(component, eventMethods.get(name), callback);
         return true;
     }
 
-    public void ParseChildTree(UIBuilderFactory factory, Component parent, List<Node> childNodes)
+    public void ParseChildTree(UIBuilderFactory factory, Component parent, List<Node> childNodes) throws InvalidXMLException
     {
-        if (childBuilderMethod == null)
-            return;
+        if (!childNodes.isEmpty() && childBuilderMethod == null)
+            throw new InvalidXMLException("The component '" + parent.getClass().getName() + "' cannot have any children.");
 
-        InvokeMethod(childBuilderMethod, factory, parent, childNodes);
+        InvokeMethod(parent, childBuilderMethod, factory, childNodes);
     }
 }

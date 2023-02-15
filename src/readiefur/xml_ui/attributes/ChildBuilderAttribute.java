@@ -10,11 +10,9 @@ import java.lang.annotation.RetentionPolicy;
  * <ul>
  *  <li>Can only be attached to a {@code method}</li>
  *  <li>Must be {@code public}</li>
- *  <li>Must be {@code static}</li>
- *  <li>Must take three parameters:
+ *  <li>Must take two parameters:
  *  <ul>
  *      <li>UI Builder Factory: {@link readiefur.xml_ui.factory.UIBuilderFactory}</li>
- *      <li>Parent component: {@link java.awt.Component}</li>
  *      <li>Child nodes: {@link java.util.List}<{@link org.w3c.dom.Node}></li>
  *  </ul>
  *  </li>

@@ -5,7 +5,8 @@
         "lib/**/*.jar"
     ],
     "cSpell.words": [
-        "structs"
+        "structs",
+        "XMLUI"
     ],
     "java.debug.settings.onBuildFailureProceed": true
 }

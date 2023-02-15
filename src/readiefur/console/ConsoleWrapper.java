@@ -4,27 +4,27 @@ import java.io.PrintStream;
 import java.util.Scanner;
 import java.util.function.Function;
 
-import readiefur.helpers.KeyValuePair;
+import readiefur.misc.Pair;
 
 public class ConsoleWrapper
 {
     private static final Object lock = new Object();
-    private static boolean hasInstanciated = false;
+    private static boolean hasInstantiated = false;
 
     private static final PrintStream stdOut = System.out;
     private static final PrintStream stdErr = System.err;
     private static final Scanner stdIn = new Scanner(System.in);
 
-    public static Function<String, KeyValuePair<Boolean, String>> outPreprocessor = str -> new KeyValuePair<>(true, str);
-    public static Function<String, KeyValuePair<Boolean, String>> errPreprocessor = str -> new KeyValuePair<>(true, str);
+    public static Function<String, Pair<Boolean, String>> outPreprocessor = str -> new Pair<>(true, str);
+    public static Function<String, Pair<Boolean, String>> errPreprocessor = str -> new Pair<>(true, str);
 
     public static void Instantiate()
     {
         synchronized (lock)
         {
-            if (hasInstanciated)
+            if (hasInstantiated)
                 return;
-            hasInstanciated = true;
+            hasInstantiated = true;
 
             //Redirect the stdOut and stdErr streams to the console.
             System.setOut(new PrintStream(System.err)
@@ -32,9 +32,9 @@ public class ConsoleWrapper
                 @Override
                 public void println(String message)
                 {
-                    KeyValuePair<Boolean, String> processedMessage = outPreprocessor.apply(message);
-                        if (processedMessage.GetKey())
-                            stdOut.println(processedMessage.GetValue());
+                    Pair<Boolean, String> processedMessage = outPreprocessor.apply(message);
+                        if (processedMessage.item1)
+                            stdOut.println(processedMessage.item2);
                 }
             });
             System.setErr(new PrintStream(System.err)
@@ -42,9 +42,9 @@ public class ConsoleWrapper
                 @Override
                 public void println(String message)
                 {
-                    KeyValuePair<Boolean, String> processedMessage = errPreprocessor.apply(message);
-                    if (processedMessage.GetKey())
-                        stdErr.println(processedMessage.GetValue());
+                    Pair<Boolean, String> processedMessage = errPreprocessor.apply(message);
+                    if (processedMessage.item1)
+                        stdErr.println(processedMessage.item2);
                 }
             });
         }

@@ -10,10 +10,8 @@ import java.lang.annotation.RetentionPolicy;
  * <ul>
  *  <li>Can only be attached to a {@code method}</li>
  *  <li>Must be {@code public}</li>
- *  <li>Must be {@code static}</li>
- *  <li>Must take two parameters:
+ *  <li>Must take one parameter:
  *  <ul>
- *      <li>Component: {@link java.awt.Component}</li>
  *      <li>Callback: {@link java.util.function.Consumer}<{@link java.lang.Object}[]></li>
  *  </ul>
  *  </li>

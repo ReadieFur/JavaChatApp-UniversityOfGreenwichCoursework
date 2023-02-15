@@ -1,6 +1,5 @@
 package readiefur.xml_ui.controls;
 
-import java.awt.Color;
 import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
 import java.util.ArrayList;
@@ -11,40 +10,25 @@ import javax.swing.plaf.InsetsUIResource;
 
 import org.w3c.dom.Node;
 
+import readiefur.misc.Pair;
 import readiefur.xml_ui.Helpers;
-import readiefur.xml_ui.Pair;
 import readiefur.xml_ui.attributes.ChildBuilderAttribute;
-import readiefur.xml_ui.attributes.CreateComponentAttribute;
-import readiefur.xml_ui.attributes.SetterAttribute;
 import readiefur.xml_ui.exceptions.InvalidXMLException;
 import readiefur.xml_ui.factory.UIBuilderFactory;
 
-/**
- * Converts an XML {@code Grid} component into a {@link javax.swing.JPanel} component configured with a {@link java.awt.GridBagLayout}.
- */
-public class Grid
+public class Grid extends JPanel
 {
-    private Grid(){}
-
-    @CreateComponentAttribute
-    public static JPanel Create()
+    public Grid()
     {
-        JPanel panel = new JPanel();
-        panel.setLayout(new GridBagLayout());
-        panel.setOpaque(false);
-        return panel;
-    }
+        super();
 
-    @SetterAttribute("Background")
-    public static void SetBackground(JPanel panel, String colour)
-    {
-        panel.setOpaque(true);
-        panel.setBackground(Color.decode(colour));
+        setLayout(new GridBagLayout());
+        setOpaque(false);
     }
 
     //TODO: XML binding for grid layout. (Currently resources work, binding does not).
     @ChildBuilderAttribute
-    public static void AddChildren(UIBuilderFactory builder, JPanel panel, List<Node> children) throws InvalidXMLException
+    public void AddChildren(UIBuilderFactory builder, List<Node> children) throws InvalidXMLException
     {
         //#region Get the grid property nodes and child nodes
         List<Pair<Integer, Float>> rowDefinitions = new ArrayList<>();
@@ -110,13 +94,13 @@ public class Grid
 
                     //Set the row weight.
                     Pair<Integer, Float> rowWeight = rowDefinitions.get(row);
-                    switch (rowWeight.Item1)
+                    switch (rowWeight.item1)
                     {
                         case 1: //Pixels.
-                            constraints.ipady = rowWeight.Item2.intValue();
+                            constraints.ipady = rowWeight.item2.intValue();
                             break;
                         case 2: //Percentage.
-                            constraints.weighty = rowWeight.Item2;
+                            constraints.weighty = rowWeight.item2;
                             break;
                         default: //Shouldn't be reached.
                             break;
@@ -143,13 +127,13 @@ public class Grid
 
                     //Set the column weight.
                     Pair<Integer, Float> columnWeight = columnDefinitions.get(column);
-                    switch (columnWeight.Item1)
+                    switch (columnWeight.item1)
                     {
                         case 1: //Pixels.
-                            constraints.ipadx = columnWeight.Item2.intValue();
+                            constraints.ipadx = columnWeight.item2.intValue();
                             break;
                         case 2: //Percentage.
-                            constraints.weightx = columnWeight.Item2;
+                            constraints.weightx = columnWeight.item2;
                             break;
                         default: //Shouldn't be reached.
                             break;
@@ -188,7 +172,7 @@ public class Grid
                     constraints.gridwidth = columnSpan;
                 }
 
-                panel.add(builder.ParseXMLNode(child), constraints);
+                add(builder.ParseXMLNode(child), constraints);
             }
         }
         //#endregion
@@ -240,7 +224,7 @@ public class Grid
         float percentageUsed = 0;
         for (Pair<Integer, Float> definition : definitions)
         {
-            switch (definition.Item1)
+            switch (definition.item1)
             {
                 case 0: //Auto.
                     autoDefinitions++;
@@ -248,7 +232,7 @@ public class Grid
                 case 1: //Pixels.
                     break;
                 case 2: //Percentage.
-                    percentageUsed += definition.Item2;
+                    percentageUsed += definition.item2;
                     break;
                 default: //Shouldn't be reached.
                     break;
@@ -264,7 +248,7 @@ public class Grid
         for (int i = 0; i < definitions.size(); i++)
         {
             Pair<Integer, Float> definition = definitions.get(i);
-            if (definition.Item1 == 0)
+            if (definition.item1 == 0)
             {
                 definitions.set(i, new Pair<>(2, autoWeight));
             }

@@ -6,8 +6,8 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 
-import readiefur.helpers.Event;
-import readiefur.helpers.IDisposable;
+import readiefur.misc.Event;
+import readiefur.misc.IDisposable;
 
 //Most of the abstract class contains more virtual members, though it is still abstract and should therefore not be instantiated on it's own.
 public abstract class ASocket extends Thread implements IDisposable

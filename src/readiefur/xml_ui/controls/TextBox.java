@@ -1,46 +1,51 @@
 package readiefur.xml_ui.controls;
 
-import java.awt.Color;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 
 import javax.swing.JTextField;
 
-import readiefur.xml_ui.attributes.CreateComponentAttribute;
+import readiefur.misc.Event;
 import readiefur.xml_ui.attributes.SetterAttribute;
 
-/**
- * Converts an XML {@code TextBox} component into a {@link javax.swing.JTextField} component.
- */
-public class TextBox
+public class TextBox extends JTextField
 {
-    private TextBox(){}
+    public final Event<KeyEvent> onKeyTyped = new Event<>();
+    public final Event<KeyEvent> onKeyPressed = new Event<>();
+    public final Event<KeyEvent> onKeyReleased = new Event<>();
 
-    @CreateComponentAttribute
-    public static JTextField Create()
+    public TextBox()
     {
-        return new JTextField();
-    }
+        super();
 
-    @SetterAttribute("Background")
-    public static void SetBackground(JTextField textBox, String colour)
-    {
-        textBox.setBackground(Color.decode(colour));
-    }
+        addKeyListener(new KeyListener()
+        {
+            @Override
+            public void keyTyped(KeyEvent e) { OnKeyTyped(e); }
 
-    @SetterAttribute("Foreground")
-    public static void SetForeground(JTextField textBox, String colour)
-    {
-        textBox.setForeground(Color.decode(colour));
+            @Override
+            public void keyPressed(KeyEvent e) { OnKeyPressed(e); }
+
+            @Override
+            public void keyReleased(KeyEvent e) { OnKeyReleased(e); }
+        });
     }
 
     @SetterAttribute("Value")
-    public static void SetValue(JTextField textBox, String value)
+    public void SetValue(String value)
     {
-        textBox.setText(value);
+        setText(value);
     }
 
     @SetterAttribute("Enabled")
-    public static void SetEnabled(JTextField textBox, String value)
+    public void SetEnabled(String value)
     {
-        textBox.setEnabled(Boolean.parseBoolean(value));
+        setEnabled(Boolean.parseBoolean(value));
     }
+
+    protected void OnKeyTyped(KeyEvent e) { onKeyTyped.Invoke(e); }
+
+    protected void OnKeyPressed(KeyEvent e) { onKeyPressed.Invoke(e); }
+
+    protected void OnKeyReleased(KeyEvent e) { onKeyReleased.Invoke(e); }
 }

@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import chat_app.net_data.EType;
 import chat_app.net_data.EmptyPayload;
 import chat_app.net_data.NetMessage;
-import readiefur.helpers.KeyValuePair;
+import readiefur.misc.Pair;
 import readiefur.sockets.ServerClientHost;
 import readiefur.sockets.ServerManager;
 
@@ -64,14 +64,14 @@ public class PingPong extends Thread
         }
     }
 
-    private void OnMessage(KeyValuePair<UUID, Object> message)
+    private void OnMessage(Pair<UUID, Object> message)
     {
-        NetMessage<?> netMessage = (NetMessage<?>)message.GetValue();
+        NetMessage<?> netMessage = (NetMessage<?>)message.item2;
 
         if (netMessage.type != EType.PONG)
             return;
 
-        if (pongedPeers.containsKey(message.GetKey()))
-            pongedPeers.put(message.GetKey(), true);
+        if (pongedPeers.containsKey(message.item1))
+            pongedPeers.put(message.item1, true);
     }
 }

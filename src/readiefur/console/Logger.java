@@ -1,6 +1,6 @@
 package readiefur.console;
 
-import readiefur.helpers.KeyValuePair;
+import readiefur.misc.Pair;
 
 public class Logger
 {
@@ -12,9 +12,9 @@ public class Logger
     {
         ConsoleWrapper.Instantiate();
         ConsoleWrapper.outPreprocessor = str ->
-            new KeyValuePair<Boolean, String>(logLevel >= ELogLevel.INFO, ConsoleColour.WHITE + "[INFO] " + str + ConsoleColour.RESET);
+            new Pair<Boolean, String>(logLevel >= ELogLevel.INFO, ConsoleColour.WHITE + "[INFO] " + str + ConsoleColour.RESET);
         ConsoleWrapper.errPreprocessor = str ->
-            new KeyValuePair<Boolean, String>(logLevel >= ELogLevel.ERROR, ConsoleColour.RED + "[ERROR] " + str + ConsoleColour.RESET);
+            new Pair<Boolean, String>(logLevel >= ELogLevel.ERROR, ConsoleColour.RED + "[ERROR] " + str + ConsoleColour.RESET);
     }
 
     private static String GetStackStringInternal()

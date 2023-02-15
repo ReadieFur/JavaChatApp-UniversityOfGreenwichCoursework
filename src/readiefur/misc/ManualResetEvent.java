@@ -1,4 +1,4 @@
-package readiefur.helpers;
+package readiefur.misc;
 
 import java.util.concurrent.TimeoutException;
 

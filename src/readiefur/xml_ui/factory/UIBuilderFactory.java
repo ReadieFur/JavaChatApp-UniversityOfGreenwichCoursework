@@ -1,7 +1,9 @@
 package readiefur.xml_ui.factory;
 
+import java.awt.Color;
 import java.awt.Component;
-import java.lang.reflect.Field;
+import java.awt.Font;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
@@ -9,12 +11,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import javax.swing.JComponent;
+
 import org.w3c.dom.Node;
 
 import readiefur.xml_ui.Helpers;
 import readiefur.xml_ui.Observable;
-import readiefur.xml_ui.XMLRootComponent;
 import readiefur.xml_ui.exceptions.InvalidXMLException;
+import readiefur.xml_ui.interfaces.IRootComponent;
 
 /**
  * A factory class that is used to build a Component tree from an XML node.
@@ -110,7 +114,8 @@ public class UIBuilderFactory
 
         if (doRootComponentCheck)
         {
-            if (XMLRootComponent.class.isAssignableFrom(cls))
+            //Check if the component implements the IRootComponent interface.
+            if (IRootComponent.class.isAssignableFrom(cls))
                 throw new InvalidXMLException("Cannot use '" + cls.getName() + "' at this level.");
         }
         else
@@ -120,7 +125,10 @@ public class UIBuilderFactory
 
         final FactoryComponentWrapper componentWrapper = GetXMLComponentWrapperForClass(cls);
 
-        Component component = componentWrapper.CreateComponent();
+        Component component;
+        try { component = componentWrapper.CreateComponent(); }
+        catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException ex)
+        { throw new InvalidXMLException("Failed to create component '" + cls.getName() + "'.", ex); }
 
         //Parse the attributes.
         ReplaceResourceReferences(xmlNode);
@@ -135,51 +143,93 @@ public class UIBuilderFactory
                 String attributeName = attribute.getNodeName();
                 String attributeValue = attribute.getNodeValue();
 
-                //Try to set the attribute as a named component.
+                //#region If attribute is a name:
                 if (attributeName.equals("Name"))
                 {
                     if (namedComponents.containsKey(attributeValue))
                         throw new InvalidXMLException("The XML component name '" + attributeValue + "' is already in use.");
 
                     namedComponents.put(attributeValue, component);
+                    component.setName(attributeValue);
+
+                    continue;
                 }
-                else if (attributeName.equals("Visible"))
+                //#endregion
+                //#region Else if setter is available:
+                if (setterNames.contains(attributeName))
                 {
-                    component.setVisible(Boolean.parseBoolean(attributeValue));
+                    SetOrBindProperty(attributeValue,
+                        newValue -> componentWrapper.TrySetAttribute(component, attributeName, newValue));
                 }
-                //Try to set the attribute as a setter.
-                else if (setterNames.contains(attributeName))
-                {
-                    //Check if we should bind to a value or just set the value.
-                    if (attributeValue.startsWith("{Binding ") && attributeValue.endsWith("}"))
-                    {
-                        //Try to bind to a value in the context.
-                        String xmlBindingName = attributeValue.substring(9, attributeValue.length() - 1);
-                        if (bindableMembers.containsKey(xmlBindingName))
-                        {
-                            final Observable<String> capturedObservable = bindableMembers.get(xmlBindingName);
-                            componentWrapper.TrySetAttribute(component, attributeName, capturedObservable.Get());
-                            capturedObservable.AddListener(newValue -> componentWrapper.TrySetAttribute(component, attributeName, newValue));
-                        }
-                        else
-                        {
-                            throw new InvalidXMLException("The XML binding '" + xmlBindingName + "' does not exist in the context.");
-                        }
-                    }
-                    else
-                    {
-                        componentWrapper.TrySetAttribute(component, attributeName, attributeValue);
-                    }
-                }
-                //Try to set the attribute as an event.
+                //#endregion
+                //#region Else if event is available:
                 else if (eventNames.contains(attributeName))
                 {
                     //Check if the context has a callback for the event.
+                    //This works for catching invalid binding contexts too.
                     if (!eventCallbacks.containsKey(attributeValue))
                         throw new InvalidXMLException("The XML event '" + attributeValue + "' does not exist in the context.");
 
                     componentWrapper.TryBindEvent(component, attributeName, eventCallbacks.get(attributeValue));
                 }
+                //#endregion
+                //#region Else try to set the property as a generic value (i.e. properties that are not specific to any one component).
+                //The components can override these properties if they want to in which case this code won't be reached.
+                else if (attributeName.equals("Visible"))
+                {
+                    SetOrBindProperty(attributeValue,
+                        newValue -> component.setVisible(Boolean.parseBoolean(newValue)));
+                }
+                else if (attributeName.equals("Foreground"))
+                {
+                    SetOrBindProperty(attributeValue,
+                        newValue -> component.setForeground(Color.decode(newValue)));
+                }
+                else if (attributeName.equals("Background"))
+                {
+                    if (component instanceof JComponent)
+                        ((JComponent)component).setOpaque(true);
+
+                    SetOrBindProperty(attributeValue,
+                        newValue -> component.setBackground(Color.decode(newValue)));
+                }
+                else if (attributeName.equals("Weight"))
+                {
+                    SetOrBindProperty(attributeValue, newValue ->
+                    {
+                        int style = component.getFont().getStyle();
+                        switch (newValue)
+                        {
+                            case "BoldItalic":
+                                style |= Font.BOLD | Font.ITALIC;
+                                break;
+                            case "Bold":
+                                style |= Font.BOLD;
+                                break;
+                            case "Italic":
+                                style |= Font.ITALIC;
+                                break;
+                            case "Normal":
+                                style &= ~Font.BOLD & ~Font.ITALIC;
+                                break;
+                            default:
+                                // throw new InvalidXMLException("Invalid weight '" + newValue + "'.");
+                                return;
+                        }
+                        component.setFont(component.getFont().deriveFont(style));
+                    });
+                }
+                else if (attributeName.equals("Size"))
+                {
+                    SetOrBindProperty(attributeValue,
+                        newValue -> component.setFont(component.getFont().deriveFont(Float.parseFloat(newValue))));
+                }
+                else if (attributeName.equals("Font"))
+                {
+                    SetOrBindProperty(attributeValue,
+                        newValue -> component.setFont(new Font(newValue, component.getFont().getStyle(), component.getFont().getSize())));
+                }
+                //#endregion
                 /*Otherwise the attribute is unknown.
                  *We don't want to throw an exception here because some attributes may be for parent nodes to read.*/
             }
@@ -191,6 +241,26 @@ public class UIBuilderFactory
             componentWrapper.ParseChildTree(this, component, childElementNodes);
 
         return component;
+    }
+
+    private void SetOrBindProperty(String value, Consumer<String> setter) throws InvalidXMLException
+    {
+        //Check if we should bind to a value or just set the value.
+        if (value.startsWith("{Binding ") && value.endsWith("}"))
+        {
+            //Try to bind to a value in the context.
+            String bindingName = value.substring(9, value.length() - 1);
+            if (!bindableMembers.containsKey(bindingName))
+                throw new InvalidXMLException("The XML binding '" + bindingName + "' does not exist in the context.");
+
+            final Observable<String> capturedObservable = bindableMembers.get(bindingName);
+            setter.accept(capturedObservable.Get());
+            capturedObservable.AddListener(setter::accept);
+        }
+        else
+        {
+            setter.accept(value);
+        }
     }
 
     /**

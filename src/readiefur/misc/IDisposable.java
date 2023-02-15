@@ -1,4 +1,4 @@
-package readiefur.helpers;
+package readiefur.misc;
 
 public interface IDisposable
 {

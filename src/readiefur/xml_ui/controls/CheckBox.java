@@ -3,39 +3,39 @@ package readiefur.xml_ui.controls;
 import java.awt.event.ActionEvent;
 import java.util.function.Consumer;
 
-import javax.swing.JButton;
+import javax.swing.JCheckBox;
 
 import readiefur.misc.Event;
 import readiefur.xml_ui.attributes.EventAttribute;
 import readiefur.xml_ui.attributes.SetterAttribute;
 
-public class Button extends JButton
+public class CheckBox extends JCheckBox
 {
     public final Event<ActionEvent> onClick = new Event<>();
 
-    public Button()
+    public CheckBox()
     {
         super();
 
         addActionListener(this::OnClick);
     }
 
-    @SetterAttribute("Content")
+    @SetterAttribute("Text")
     public void SetText(String text)
     {
         setText(text);
-    }
-
-    @SetterAttribute("Enabled")
-    public void SetEnabled(String enabled)
-    {
-        setEnabled(Boolean.parseBoolean(enabled));
     }
 
     @SetterAttribute("ToolTip")
     public void SetToolTip(String toolTip)
     {
         setToolTipText(toolTip);
+    }
+
+    @SetterAttribute("Checked")
+    public void SetChecked(String checked)
+    {
+        setSelected(Boolean.parseBoolean(checked));
     }
 
     @EventAttribute("Click")
