@@ -1,0 +1,65 @@
+<Window
+    xmlns="readiefur.xml_ui.controls"
+    Title="ChatAppMockUI"
+    Width="1080" Height="720"
+    Background="{Binding backgroundColourPrimary}">
+    <Window.Resources>
+        <Resource Key="clientEntryTextMargin" Value="4,4,4,4"/>
+        <Resource Key="chatBoxEntryMargin" Value="0,0,2,0"/>
+    </Window.Resources>
+    <!-- TODO: *.Styles (styles entry to apply to types) -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <!-- TODO: Binding for these values. (Currently resources work, binding does not). -->
+            <ColumnDefinition/>
+            <ColumnDefinition Width="0.7"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- #region Clients list -->
+        <Scrollable Grid.Column="0" Margin="4,4,4,2">
+            <StackPanel Name="clientList" Background="{Binding backgroundColourSecondary}">
+
+                <!-- #region Example content -->
+                <!-- <Grid Background="{Binding backgroundColourTertiary}" VerticalAlignment="Center" Margin="4,4,2,4">
+                    <Label Text="Client" Foreground="{Binding foregroundColour}" HorizontalAlignment="Left" Margin="{Resource clientEntryTextMargin}"/>
+                    <Label Text="IP" Foreground="{Binding foregroundColour}" HorizontalAlignment="Right" Margin="{Resource clientEntryTextMargin}"/>
+                </Grid> -->
+                <!-- #endregion -->
+
+            </StackPanel>
+        </Scrollable>
+        <!-- #endregion -->
+
+        <!-- #region Chat area -->
+        <Grid Grid.Column="1" Background="{Binding backgroundColourSecondary}" Margin="4,4,4,4">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition Height="10px"/>
+            </Grid.RowDefinitions>
+
+            <!-- #region Chat box -->
+            <Scrollable Name="chatBoxScroller" Grid.Row="0" Margin="4,4,2,4">
+                <!-- I am not using a text block for the messages because consistently having text appear at the bottom of the page would be a struggle.
+                Instead I will use a stack panel that is bottom aligned, the downside to this is that the nested TextBlocks cannot be multi-selected. -->
+                <StackPanel Name="chatBox" Background="{Binding backgroundColourTertiary}" Orientation="BottomToTop">
+                    <!-- #region Example content -->
+                    <!-- <TextBlock Background="{Binding backgroundColourTertiary}" IsReadOnly="true" Margin="{Resource chatBoxEntryMargin}" Content="[Client 1] Hello, World!"/> -->
+                    <!-- #endregion -->
+                </StackPanel>
+            </Scrollable>
+            <!-- #endregion -->
+
+            <!-- #region Input box -->
+            <Grid Grid.Row="1" Margin="4,4,4,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="4px"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Name="inputBox" Grid.Column="0" Background="{Binding backgroundColourTertiary}"/>
+                <Button Name="sendButton" Grid.Column="1" Content="Send" Background="{Binding backgroundColourTertiary}" Foreground="{Binding foregroundColour}" Click="SendButton_OnClick"/>
+            </Grid>
+            <!-- #endregion -->
+        </Grid>
+        <!-- #endregion -->
+    </Grid>
+</Window>

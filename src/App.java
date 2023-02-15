@@ -9,13 +9,16 @@ import chat_app.ChatManager;
 import readiefur.console.ELogLevel;
 import readiefur.console.Logger;
 import readiefur.xml_ui.exceptions.InvalidXMLException;
+import ui.ChatUI;
 import ui.ConfigurationUI;
 import ui.EMessageBoxButtons;
 import ui.MessageBox;
 
 public class App
 {
+    //With how this program has been made, it is possible to run multiple chats using the same process, though that has not been implemented.
     public static void main(String[] args)
+        throws IllegalArgumentException, IllegalAccessException, IOException, ParserConfigurationException, SAXException, InvalidXMLException
     {
         //#region Initialize the console log manager.
         // Logger.ConfigureConsole();
@@ -31,21 +34,14 @@ public class App
         //#region Get the desired user configuration via the UI (if the parameters are not specified on the command line).
         if (initialServerAddress == null || port == -1 || username == null)
         {
-            ConfigurationUI configurationWindow;
+            Logger.Trace("Starting configuration UI...");
+
             //I wish I could've used the ?? null condition operator that C# has here.
-            try
-            {
-                configurationWindow = new ConfigurationUI(
-                    initialServerAddress != null ? initialServerAddress : "127.0.0.1",
-                    port != -1 ? port : 8080,
-                    username != null ? username : "Anonymous");
-            }
-            catch (IllegalArgumentException | IllegalAccessException | IOException | ParserConfigurationException | SAXException | InvalidXMLException e)
-            {
-                Logger.Critical("Failed to load configuration UI: " + e.getMessage());
-                System.exit(1);
-                return; //Required to satisfy the compiler.
-            }
+            ConfigurationUI configurationWindow = new ConfigurationUI(
+                initialServerAddress != null ? initialServerAddress : "127.0.0.1",
+                port != -1 ? port : 8080,
+                username != null ? username : "Anonymous");
+
             configurationWindow.ShowDialog();
 
             initialServerAddress = configurationWindow.GetServerAddress();
@@ -93,16 +89,30 @@ public class App
         //#endregion
 
         //#region Begin the chat manager.
+        Logger.Trace("Starting chat manager...");
+
         ChatManager chatManager = new ChatManager(initialServerAddress, port, username);
         chatManager.Begin();
         //#endregion
 
         //#region Create the chat UI.
-        //TODO: Create the chat ui.
+        Logger.Trace("Starting chat UI...");
+
+        /*I will let this method throw exceptions as any that may occur at this level are critical
+         *and my console log manager will format the exception appropriately and then print it to the console,
+         *at which point the program will exit with an unsuccessful code.*/
+        ChatUI chatUI = new ChatUI(chatManager);
+
+        Logger.Debug("Program started.");
+
+        //This method will show the UI and block the current thread until the UI is closed.
+        chatUI.ShowDialog();
         //#endregion
 
         //#region Cleanup.
-        // chatManager.Dispose();
+        Logger.Debug("Exiting...");
+
+        chatManager.Dispose();
         //#endregion
     }
 }
