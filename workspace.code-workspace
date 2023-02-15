@@ -3,5 +3,8 @@
 		{
 			"path": "."
 		}
-	]
+	],
+	"settings": {
+		"java.debug.settings.onBuildFailureProceed": true
+	}
 }
