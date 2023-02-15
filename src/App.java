@@ -32,7 +32,14 @@ public class App
         if (initialServerAddress == null || port == -1 || username == null)
         {
             ConfigurationUI configurationWindow;
-            try { configurationWindow = new ConfigurationUI("127.0.0.1", 8080, "Anonymous"); }
+            //I wish I could've used the ?? null condition operator that C# has here.
+            try
+            {
+                configurationWindow = new ConfigurationUI(
+                    initialServerAddress != null ? initialServerAddress : "127.0.0.1",
+                    port != -1 ? port : 8080,
+                    username != null ? username : "Anonymous");
+            }
             catch (IllegalArgumentException | IllegalAccessException | IOException | ParserConfigurationException | SAXException | InvalidXMLException e)
             {
                 Logger.Critical("Failed to load configuration UI: " + e.getMessage());
