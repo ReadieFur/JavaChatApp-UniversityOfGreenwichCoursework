@@ -3,23 +3,24 @@ package chat_app;
 import java.io.Serializable;
 import java.util.UUID;
 
-import chat_app.net_data.EPeerStatus;
-import readiefur.sockets.ServerManager;
-
 public class Peer implements Serializable
 {
-    protected String uuid = ServerManager.INVALID_UUID.toString(); //UUID is not serializable so we must store it as an alternate type (i.e. String).
-    protected String ipAddress = null;
-    protected EPeerStatus status = EPeerStatus.UNINITIALIZED;
-    protected String nickname;
+    private String uuid; //UUID is not serializable so we must store it as an alternate type (i.e. String).
+    private String ipAddress;
+    private Boolean isReady = false; //I didn't want this value to be serialized but the transient attribute wasn't working.
+    public String nickname = null;
 
-    protected Peer() {}
+    public Peer(UUID uuid, String ipAddress)
+    {
+        this.uuid = uuid.toString();
+        this.ipAddress = ipAddress;
+    }
 
-    /**
-     * Used for the client handshake process.
-     */
+    //Used for the client handshake process.
     public Peer(String desiredUsername)
     {
+        this.uuid = null;
+        this.ipAddress = null;
         this.nickname = desiredUsername;
     }
 
@@ -33,8 +34,13 @@ public class Peer implements Serializable
         return ipAddress;
     }
 
-    public EPeerStatus GetStatus()
+    public void SetIsReady()
     {
-        return status;
+        isReady = true;
+    }
+
+    public Boolean GetIsReady()
+    {
+        return isReady;
     }
 }
