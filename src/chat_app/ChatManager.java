@@ -31,6 +31,9 @@ import readiefur.sockets.ServerManager;
 public class ChatManager implements IDisposable
 {
     //#region Fields
+    private Boolean isDisposed = false;
+    private final Object lock = new Object();
+
     //Constant properties (doesn't change between calling Restart()).
     private final String fallbackServerIPAddress;
     private final int port;
@@ -66,10 +69,13 @@ public class ChatManager implements IDisposable
     @Override
     public void Dispose()
     {
-        try { Cleanup(); }
-        catch (ClassCastException ex)
+        synchronized (lock)
         {
-            //TODO: Figure out why the client throws a Peer cannot be cast to ServerPeer exception when disposed (in ASocket::Dispose).
+            if (isDisposed)
+                return;
+            isDisposed = true;
+
+            Cleanup();
         }
     }
 
@@ -111,93 +117,99 @@ public class ChatManager implements IDisposable
 
     private void Restart()
     {
-        Logger.Trace("Restarting...");
-
-        UUID oldClientID = id;
-        List<Peer> oldPeers = new ArrayList<>(peers.values());
-
-        Cleanup();
-
-        /*Add some random time between 0 and 1000ms, this is to help prevent two servers trying to be created at the same time.
-         *While I do catch this issue if the server and client are on the same machine, if they are not then it is possible that,
-         *Two servers get made and the clients are split across servers which is not desirable.*/
-        /*In the future I think I would like to have this delay be based on the connection index (or GUID).
-         *Or if the server had a clean exit, tell which clients who will be the next host.*/
-        //We can skip this wait of the peersList was empty.
-        if (oldPeers.isEmpty())
+        synchronized (lock)
         {
-            try { Thread.sleep((long)(Math.random() * 1000)); }
-            catch (InterruptedException e) {}
-        }
+            if (isDisposed)
+                return;
 
-        String hostAddress = null;
-        //Look for a host.
-        for (Peer peer : oldPeers)
-        {
-            UUID peerUUID = peer.GetUUID();
-            if (peerUUID.equals(ServerManager.INVALID_UUID) //We don't include the server ID as a check as we may have accidentally lost connection.
-                || (oldClientID != null && peerUUID.equals(oldClientID))) //We don't check ourself.
-                continue;
+            Logger.Trace("Restarting...");
 
-            String peerAddress = peer.GetIPAddress();
-            if (FindHost(hostAddress, port))
+            UUID oldClientID = id;
+            List<Peer> oldPeers = new ArrayList<>(peers.values());
+
+            Cleanup();
+
+            /*Add some random time between 0 and 1000ms, this is to help prevent two servers trying to be created at the same time.
+            *While I do catch this issue if the server and client are on the same machine, if they are not then it is possible that,
+            *Two servers get made and the clients are split across servers which is not desirable.*/
+            /*In the future I think I would like to have this delay be based on the connection index (or GUID).
+            *Or if the server had a clean exit, tell which clients who will be the next host.*/
+            //We can skip this wait of the peersList was empty.
+            if (oldPeers.isEmpty())
             {
-                hostAddress = peerAddress;
-                break;
+                try { Thread.sleep((long)(Math.random() * 1000)); }
+                catch (InterruptedException e) {}
             }
+
+            String hostAddress = null;
+            //Look for a host.
+            for (Peer peer : oldPeers)
+            {
+                UUID peerUUID = peer.GetUUID();
+                if (peerUUID.equals(ServerManager.INVALID_UUID) //We don't include the server ID as a check as we may have accidentally lost connection.
+                    || (oldClientID != null && peerUUID.equals(oldClientID))) //We don't check ourself.
+                    continue;
+
+                String peerAddress = peer.GetIPAddress();
+                if (FindHost(hostAddress, port))
+                {
+                    hostAddress = peerAddress;
+                    break;
+                }
+            }
+
+            //If a host was not found on one of the previous peers, check if a fallback server was passed and is valid.
+            if (hostAddress == null && fallbackServerIPAddress != null && FindHost(fallbackServerIPAddress, port))
+                hostAddress = fallbackServerIPAddress;
+
+            //If a host was not found, begin hosting.
+            isHost = hostAddress == null;
+            if (isHost)
+            {
+                Logger.Trace("No host found, starting server...");
+
+                //Start the server.
+                serverManager = new ServerManager(port);
+                serverManager.onConnect.Add(this::OnNetConnect);
+                serverManager.onMessage.Add(this::OnNetMessage);
+                serverManager.onClose.Add(this::OnNetClose);
+                serverManager.onError.Add(this::OnNetError);
+
+                String serverAddress;
+                try { serverAddress = Inet4Address.getLocalHost().getHostAddress(); }
+                catch (UnknownHostException e) { serverAddress = fallbackServerIPAddress; }
+
+                Peer serverPeer = new ServerPeer(
+                    ServerManager.SERVER_UUID,
+                    serverAddress,
+                    desiredUsername,
+                    EPeerStatus.CONNECTED);
+                peers.put(ServerManager.SERVER_UUID, serverPeer);
+
+                serverManager.start();
+                Logger.Trace(GetLogPrefix() + "Server started.");
+
+                // pingPong = new PingPong(serverManager);
+                // pingPong.start();
+                // Logger.Trace(GetLogPrefix() + "PingPong started.");
+            }
+            else
+            {
+                Logger.Trace("Host found at " + hostAddress + ":" + port + ". Connecting...");
+
+                //Connect to the server.
+                client = new Client(hostAddress, port);
+                client.onConnect.Add(nul -> OnNetConnect(ServerManager.SERVER_UUID));
+                client.onMessage.Add(data -> OnNetMessage(new Pair<>(ServerManager.SERVER_UUID, data)));
+                client.onClose.Add(nul -> OnNetClose(ServerManager.SERVER_UUID));
+                client.onError.Add(error -> OnNetError(new Pair<>(ServerManager.SERVER_UUID, error)));
+
+                client.start();
+                Logger.Trace(GetLogPrefix() + "Client started.");
+            }
+
+            Logger.Info("[CHAT_MANAGER] Promoted to " + (isHost ? "host" : "client") + ".");
         }
-
-        //If a host was not found on one of the previous peers, check if a fallback server was passed and is valid.
-        if (hostAddress == null && fallbackServerIPAddress != null && FindHost(fallbackServerIPAddress, port))
-            hostAddress = fallbackServerIPAddress;
-
-        //If a host was not found, begin hosting.
-        isHost = hostAddress == null;
-        if (isHost)
-        {
-            Logger.Trace("No host found, starting server...");
-
-            //Start the server.
-            serverManager = new ServerManager(port);
-            serverManager.onConnect.Add(this::OnNetConnect);
-            serverManager.onMessage.Add(this::OnNetMessage);
-            serverManager.onClose.Add(this::OnNetClose);
-            serverManager.onError.Add(this::OnNetError);
-
-            String serverAddress;
-            try { serverAddress = Inet4Address.getLocalHost().getHostAddress(); }
-            catch (UnknownHostException e) { serverAddress = fallbackServerIPAddress; }
-
-            Peer serverPeer = new ServerPeer(
-                ServerManager.SERVER_UUID,
-                serverAddress,
-                desiredUsername,
-                EPeerStatus.CONNECTED);
-            peers.put(ServerManager.SERVER_UUID, serverPeer);
-
-            serverManager.start();
-            Logger.Trace(GetLogPrefix() + "Server started.");
-
-            // pingPong = new PingPong(serverManager);
-            // pingPong.start();
-            // Logger.Trace(GetLogPrefix() + "PingPong started.");
-        }
-        else
-        {
-            Logger.Trace("Host found at " + hostAddress + ":" + port + ". Connecting...");
-
-            //Connect to the server.
-            client = new Client(hostAddress, port);
-            client.onConnect.Add(nul -> OnNetConnect(ServerManager.SERVER_UUID));
-            client.onMessage.Add(data -> OnNetMessage(new Pair<>(ServerManager.SERVER_UUID, data)));
-            client.onClose.Add(nul -> OnNetClose(ServerManager.SERVER_UUID));
-            client.onError.Add(error -> OnNetError(new Pair<>(ServerManager.SERVER_UUID, error)));
-
-            client.start();
-            Logger.Trace(GetLogPrefix() + "Client started.");
-        }
-
-        Logger.Info("[CHAT_MANAGER] Promoted to " + (isHost ? "host" : "client") + ".");
     }
 
     private Boolean FindHost(String ipAddress, int port)
@@ -228,6 +240,9 @@ public class ChatManager implements IDisposable
          *And yes while this does hurt performance, fortunately this app is low-traffic enough that it shouldn't be a problem.*/
         synchronized (peers)
         {
+            if (isDisposed)
+                return;
+
             Logger.Trace(GetLogPrefix() + "Connection opened: " + uuid);
 
             if (isHost)
@@ -267,6 +282,9 @@ public class ChatManager implements IDisposable
 
     private void OnNetMessage(Pair<UUID, Object> data)
     {
+        if (isDisposed)
+            return;
+
         NetMessage<?> netMessage = (NetMessage<?>)data.item2;
 
         Logger.Trace(GetLogPrefix() + "Message received: " + data.item1 + " | " + netMessage.type);
@@ -556,6 +574,9 @@ public class ChatManager implements IDisposable
     {
         synchronized (peers)
         {
+            if (isDisposed)
+                return;
+
             Logger.Trace(GetLogPrefix() + "Connection closed: " + uuid);
             ServerPeer oldPeer = (ServerPeer)peers.get(uuid);
 
