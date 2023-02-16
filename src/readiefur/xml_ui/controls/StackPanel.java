@@ -73,11 +73,22 @@ public class StackPanel extends JPanel
 
     /**
      * Adds a child to the panel and refreshes it.
+     * @param child
+     * @param additionalConstraints Any additional constraints to apply to the child, set to null if none.
      */
-    public void AddChild(Component child)
+    public void AddChild(Component child, GridBagConstraints additionalConstraints)
     {
+        //Get the base constraints for the child.
+        GridBagConstraints constraints = GetConstraintsForOrientation(GetOrientation(), GetChildCount());
+
+        //Add the additional constraints to the constraints.
+        if (additionalConstraints != null)
+        {
+            constraints.insets = additionalConstraints.insets;
+        }
+
         //Add the child to the panel.
-        add(child, GetConstraintsForOrientation(GetOrientation(), GetChildCount()));
+        add(child, constraints);
 
         //Update the filler component.
         ComputeFiller();
