@@ -50,14 +50,14 @@ public class ChatUI extends XMLUI<Window>
         rootComponent.ShowDialog();
     }
 
-    private void ChatManager_OnPeerConnected(UUID peerId)
+    private void ChatManager_OnPeerConnected(Peer peer)
     {
-        Logger.Info("Peer connected: " + chatManager.GetPeers().get(peerId).GetUsername());
+        Logger.Info("Peer connected: " + peer.GetUsername());
     }
 
-    private void ChatManager_OnPeerDisconnected(UUID peerId)
+    private void ChatManager_OnPeerDisconnected(Peer peer)
     {
-        Logger.Info("Peer disconnected: " + chatManager.GetPeers().get(peerId).GetUsername());
+        Logger.Info("Peer disconnected: " + peer.GetUsername());
     }
 
     private void ChatManager_OnMessageReceived(MessagePayload message)

@@ -50,8 +50,8 @@ public class ChatManager implements IDisposable
     private ConcurrentHashMap<UUID, ManualResetEvent> pendingMessages = new ConcurrentHashMap<>();
 
     //Events.
-    public final Event<UUID> onPeerConnected = new Event<>();
-    public final Event<UUID> onPeerDisconnected = new Event<>();
+    public final Event<Peer> onPeerConnected = new Event<>();
+    public final Event<Peer> onPeerDisconnected = new Event<>();
     public final Event<MessagePayload> onMessageReceived = new Event<>();
     //#endregion
 
@@ -235,8 +235,6 @@ public class ChatManager implements IDisposable
                     serverManager.GetClientHosts().get(uuid).GetSocket().getLocalAddress().getHostAddress(),
                     desiredUsername,
                     EPeerStatus.UNINITIALIZED));
-
-                onPeerConnected.Invoke(uuid);
             }
             else
             {
@@ -257,9 +255,9 @@ public class ChatManager implements IDisposable
                     //The new peer will have been added in the OnNetMessage > Host > HANDSHAKE message.
                     Logger.Info(GetLogPrefix() + "Peer connected: " + peers.get(uuid).GetUsername());
                 }
-
-                onPeerConnected.Invoke(uuid);
             }
+
+            onPeerConnected.Invoke(peers.get(uuid));
         }
     }
 
@@ -555,6 +553,7 @@ public class ChatManager implements IDisposable
         synchronized (peers)
         {
             Logger.Trace(GetLogPrefix() + "Connection closed: " + uuid);
+            ServerPeer oldPeer = (ServerPeer)peers.get(uuid);
 
             if (isHost)
             {
@@ -563,7 +562,6 @@ public class ChatManager implements IDisposable
                     return;
 
                 //Client has disconnected.
-                ServerPeer oldPeer = (ServerPeer)peers.get(uuid);
                 peers.remove(uuid);
 
                 //If the client wasn't a connected peer then don't broadcast the disconnect (this can occur for handshake requests).
@@ -583,8 +581,6 @@ public class ChatManager implements IDisposable
             }
             else
             {
-                Peer oldPeer = peers.get(uuid);
-
                 //If the server has disconnected, restart the client.
                 if (uuid.equals(ServerManager.SERVER_UUID))
                 {
@@ -603,7 +599,7 @@ public class ChatManager implements IDisposable
             }
 
             //If the above code hasn't returned, then we can invoke the disconnect event.
-            onPeerDisconnected.Invoke(uuid);
+            onPeerDisconnected.Invoke(oldPeer);
         }
     }
 
