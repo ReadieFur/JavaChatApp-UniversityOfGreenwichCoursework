@@ -66,7 +66,11 @@ public class ChatManager implements IDisposable
     @Override
     public void Dispose()
     {
-        Cleanup();
+        try { Cleanup(); }
+        catch (ClassCastException ex)
+        {
+            //TODO: Figure out why the client throws a Peer cannot be cast to ServerPeer exception when disposed (in ASocket::Dispose).
+        }
     }
 
     /**
