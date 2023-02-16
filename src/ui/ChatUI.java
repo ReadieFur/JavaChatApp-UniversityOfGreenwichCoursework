@@ -1,8 +1,6 @@
 package ui;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.UUID;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -21,10 +19,10 @@ import readiefur.xml_ui.exceptions.InvalidXMLException;
 
 public class ChatUI extends XMLUI<Window>
 {
-    @BindingAttribute(DefaultValue = "#FFFFFF") private Observable<String> backgroundColourPrimary;
-    @BindingAttribute(DefaultValue = "#DADADA") private Observable<String> backgroundColourSecondary;
-    @BindingAttribute(DefaultValue = "#BDBDBD") private Observable<String> backgroundColourTertiary;
-    @BindingAttribute(DefaultValue = "#000000") private Observable<String> foregroundColour;
+    @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_PRIMARY) private Observable<String> backgroundColourPrimary;
+    @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_SECONDARY) private Observable<String> backgroundColourSecondary;
+    @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_TERTIARY) private Observable<String> backgroundColourTertiary;
+    @BindingAttribute(DefaultValue = Themes.LIGHT_FOREGROUND) private Observable<String> foregroundColour;
 
     private final ChatManager chatManager;
 
@@ -38,6 +36,15 @@ public class ChatUI extends XMLUI<Window>
         this.chatManager.onPeerConnected.Add(this::ChatManager_OnPeerConnected);
         this.chatManager.onPeerDisconnected.Add(this::ChatManager_OnPeerDisconnected);
         this.chatManager.onMessageReceived.Add(this::ChatManager_OnMessageReceived);
+
+        //Normally in C# I would use the discard operator but Java doesn't have that.
+        rootComponent.onWindowClosed.Add(e ->
+        {
+            //It is a good practice to unsubscribe from the events.
+            this.chatManager.onPeerConnected.Remove(this::ChatManager_OnPeerConnected);
+            this.chatManager.onPeerDisconnected.Remove(this::ChatManager_OnPeerDisconnected);
+            this.chatManager.onMessageReceived.Remove(this::ChatManager_OnMessageReceived);
+        });
     }
 
     public void Show()
