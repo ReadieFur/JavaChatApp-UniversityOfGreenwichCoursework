@@ -106,7 +106,11 @@ public class ChatManager implements IDisposable
         //Client related.
         if (client != null)
         {
-            client.Dispose();
+            try { client.Dispose(); }
+            catch (ClassCastException ex)
+            {
+                //TODO: Figure out why the client throws a Peer cannot be cast to ServerPeer exception when disposed (in ASocket::Dispose).
+            }
             client = null;
         }
 
