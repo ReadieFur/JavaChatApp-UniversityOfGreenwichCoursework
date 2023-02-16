@@ -43,7 +43,7 @@
                 Instead I will use a stack panel that is bottom aligned, the downside to this is that the nested TextBlocks cannot be multi-selected. -->
                 <StackPanel Name="chatBox" Background="{Binding backgroundColourTertiary}" Orientation="BottomToTop">
                     <!-- #region Example content -->
-                    <!-- <TextBlock Background="{Binding backgroundColourTertiary}" IsReadOnly="true" Margin="{Resource chatBoxEntryMargin}" Content="[Client 1] Hello, World!"/> -->
+                    <!-- <TextBlock Background="{Binding backgroundColourTertiary}" IsReadOnly="true" Wrap="true" Margin="{Resource chatBoxEntryMargin}" Content="[Client 1] Hello, World!"/> -->
                     <!-- #endregion -->
                 </StackPanel>
             </Scrollable>

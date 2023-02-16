@@ -709,6 +709,19 @@ public class ChatManager implements IDisposable
         return isHost;
     }
 
+    public UUID GetID()
+    {
+        return id;
+    }
+
+    /**
+     * Returns whether or not the server has been disposed.
+     */
+    public Boolean IsDisposed()
+    {
+        return isDisposed;
+    }
+
     /**
      * Sends a message to the specified recipient and waits for the server to acknowledge the message.
      * @return {@code true} if the message was sent successfully, otherwise {@code false}.
