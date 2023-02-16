@@ -376,7 +376,6 @@ public class ChatManager implements IDisposable
                 }
                 case MESSAGE:
                 {
-                    //TODO: Add message receiving for server-as-a-client.
                     //Occurs when a client sends a message to be processed by the server.
                     MessagePayload inPayload = (MessagePayload)netMessage.payload;
 
@@ -394,14 +393,18 @@ public class ChatManager implements IDisposable
                         message.type = EType.MESSAGE;
                         message.payload = inPayload;
                         serverManager.BroadcastMessage(message);
+
+                        //Also invoke the OnMessageReceived event.
+                        onMessageReceived.Invoke(inPayload);
                     }
                     else if (peers.containsKey(recipient) && peers.get(recipient).GetStatus() == EPeerStatus.CONNECTED)
                     {
-                        //Send the message to the specified peer.
-                        NetMessage<MessagePayload> message = new NetMessage<>();
-                        message.type = EType.MESSAGE;
-                        message.payload = inPayload;
-                        serverManager.SendMessage(recipient, message);
+                        /*If the recipient is us (the server) then invoke the OnMessageReceived event.
+                         *Otherwise forward the message to the specified peer.*/
+                        if (recipient.equals(ServerManager.SERVER_UUID))
+                            onMessageReceived.Invoke(inPayload);
+                        else
+                            serverManager.SendMessage(recipient, netMessage);
                     }
                     //Otherwise ignore the request.
                     break;
@@ -712,23 +715,47 @@ public class ChatManager implements IDisposable
      */
     public Boolean SendMessageSync(UUID recipient, String message)
     {
+        return SendMessageInternal(recipient, message, true);
+    }
+
+    /**
+     * Sends a message to the specified recipient and does not wait for the server to acknowledge the message.
+     */
+    public void SendMessage(UUID recipient, String message)
+    {
+        SendMessageInternal(recipient, message, false);
+    }
+
+    private Boolean SendMessageInternal(UUID recipient, String message, Boolean sendSync)
+    {
         MessagePayload payload = new MessagePayload(recipient, message);
         NetMessage<MessagePayload> netMessage = new NetMessage<>();
         netMessage.type = EType.MESSAGE;
         netMessage.payload = payload;
 
-        ManualResetEvent messageSentEvent = new ManualResetEvent(false);
-        pendingMessages.put(payload.GetMessageID(), messageSentEvent);
+        //If we want to send the message synchronously, setup the ManualResetEvent to wait on.
+        ManualResetEvent messageSentEvent = null; //Required to satisfy the compiler, the bang nullable operator would've been nice here (C# feature).
+        if (sendSync)
+        {
+            messageSentEvent = new ManualResetEvent(false);
+            pendingMessages.put(payload.GetMessageID(), messageSentEvent);
+        }
 
         if (isHost)
         {
-            //TODO: Implement server messaging.
+            //If we are the server, we have no way of "sending messages to ourself", so we can just call the OnNetMessage method directly.
+            OnNetMessage(new Pair<>(ServerManager.SERVER_UUID, netMessage));
         }
         else
         {
             client.SendMessage(netMessage);
         }
 
+        //If we are not sending the message synchronously, return true here.
+        if (!sendSync)
+            return true;
+
+        //Otherwise wait for the server to acknowledge the message (within the time limit, currently hardcoded).
         try
         {
             messageSentEvent.WaitOne(5000);
@@ -740,26 +767,8 @@ public class ChatManager implements IDisposable
         }
         finally
         {
+            //Remove the message from the pending messages list.
             pendingMessages.remove(payload.GetMessageID());
-        }
-    }
-
-    /**
-     * Sends a message to the specified recipient and does not wait for the server to acknowledge the message.
-     */
-    public void SendMessage(UUID recipient, String message)
-    {
-        MessagePayload payload = new MessagePayload(recipient, message);
-        NetMessage<MessagePayload> netMessage = new NetMessage<>();
-        netMessage.type = EType.MESSAGE;
-        netMessage.payload = payload;
-
-        if (isHost)
-        {
-        }
-        else
-        {
-            client.SendMessage(netMessage);
         }
     }
     //#endregion
