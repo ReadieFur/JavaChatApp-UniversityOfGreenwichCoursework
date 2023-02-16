@@ -4,6 +4,9 @@ import java.io.Serializable;
 
 import chat_app.Peer;
 
+/**
+ * A payload containing a list of peers.
+ */
 public class PeersPayload implements Serializable
 {
     public Peer[] peers = new Peer[0];

@@ -17,7 +17,7 @@ public class ServerPeer extends Peer
     {
         this.uuid = uuid.toString();
         this.ipAddress = ipAddress;
-        this.nickname = username;
+        this.username = username;
         this.status = status;
     }
 
@@ -26,9 +26,9 @@ public class ServerPeer extends Peer
         this.status = status;
     }
 
-    public void SetNickname(String nickname)
+    public void SetUsername(String username)
     {
-        this.nickname = nickname;
+        this.username = username;
     }
 
     public static Peer ToPeer(ServerPeer serverPeer)
@@ -37,7 +37,7 @@ public class ServerPeer extends Peer
         peer.uuid = serverPeer.uuid;
         peer.ipAddress = serverPeer.ipAddress;
         peer.status = serverPeer.status;
-        peer.nickname = serverPeer.nickname;
+        peer.username = serverPeer.username;
         return peer;
     }
 }

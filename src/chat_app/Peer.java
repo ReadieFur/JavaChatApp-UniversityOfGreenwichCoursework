@@ -11,7 +11,7 @@ public class Peer implements Serializable
     protected String uuid = ServerManager.INVALID_UUID.toString(); //UUID is not serializable so we must store it as an alternate type (i.e. String).
     protected String ipAddress = "";
     protected EPeerStatus status = EPeerStatus.UNINITIALIZED;
-    protected String nickname = "";
+    protected String username = "";
 
     /**
      * This hidden constructor is used for the deserialization.
@@ -23,7 +23,7 @@ public class Peer implements Serializable
      */
     public Peer(String desiredUsername)
     {
-        this.nickname = desiredUsername;
+        this.username = desiredUsername;
     }
 
     public UUID GetUUID()
@@ -41,8 +41,8 @@ public class Peer implements Serializable
         return status;
     }
 
-    public String GetNickname()
+    public String GetUsername()
     {
-        return nickname;
+        return username;
     }
 }

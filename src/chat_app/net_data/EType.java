@@ -16,7 +16,6 @@ public enum EType
      * <br></br>
      * Payload: {@link chat_app.Peer}
      */
-    //Possibly include the client ID in the server response?
     HANDSHAKE,
     /**
      * Used to request a pong from a peer.
@@ -43,15 +42,9 @@ public enum EType
      */
     PEERS,
     /**
-     * Used to request that the message payload should be broadcast to all peers.
+     * Used to request that the message payload should be sent to the specified peer (or broadcast).
      * <br></br>
-     * Payload: {@code NOT_YET_IMPLEMENTED}
-     */
-    BROADCAST,
-    /**
-     * Used to request that the message payload should be sent to a specific peer.
-     * <br></br>
-     * Payload: {@code NOT_YET_IMPLEMENTED}
+     * Payload: {@link MessagePayload}
      */
     MESSAGE
 }
