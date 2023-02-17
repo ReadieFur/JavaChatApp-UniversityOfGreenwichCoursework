@@ -16,6 +16,10 @@ import chat_app.frontend.MessageBox;
 
 public class App
 {
+    private static final int ARG_INDEX_SERVER_ADDRESS = 0;
+    private static final int ARG_INDEX_PORT = 1;
+    private static final int ARG_INDEX_USERNAME = 2;
+
     //With how this program has been made, it is possible to run multiple chats using the same process, though that has not been implemented.
     public static void main(String[] args)
         throws IllegalArgumentException, IllegalAccessException, IOException, ParserConfigurationException, SAXException, InvalidXMLException
@@ -26,9 +30,9 @@ public class App
         //#endregion
 
         //#region Parse command line arguments.
-        String initialServerAddress = args.length > 0 ? args[0] : null;
-        int port = args.length > 1 ? Integer.parseInt(args[1]) : -1;
-        String username = args.length > 2 ? args[2] : null;
+        String initialServerAddress = args.length > ARG_INDEX_SERVER_ADDRESS ? args[ARG_INDEX_SERVER_ADDRESS] : null;
+        int port = args.length > ARG_INDEX_PORT ? Integer.parseInt(args[ARG_INDEX_PORT]) : -1;
+        String username = args.length > ARG_INDEX_USERNAME ? args[ARG_INDEX_USERNAME] : null;
         //#endregion
 
         //#region Get the desired user configuration via the UI (if the parameters are not specified on the command line).
