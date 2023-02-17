@@ -106,11 +106,7 @@ public class ChatManager implements IDisposable
         //Client related.
         if (client != null)
         {
-            try { client.Dispose(); }
-            catch (ClassCastException ex)
-            {
-                //TODO: Figure out why the client throws a Peer cannot be cast to ServerPeer exception when disposed (in ASocket::Dispose).
-            }
+            client.Dispose();
             client = null;
         }
 
@@ -183,6 +179,7 @@ public class ChatManager implements IDisposable
                 try { serverAddress = Inet4Address.getLocalHost().getHostAddress(); }
                 catch (UnknownHostException e) { serverAddress = fallbackServerIPAddress; }
 
+                id = ServerManager.SERVER_UUID;
                 Peer serverPeer = new ServerPeer(
                     ServerManager.SERVER_UUID,
                     serverAddress,
@@ -193,9 +190,9 @@ public class ChatManager implements IDisposable
                 serverManager.start();
                 Logger.Trace(GetLogPrefix() + "Server started.");
 
-                // pingPong = new PingPong(serverManager);
-                // pingPong.start();
-                // Logger.Trace(GetLogPrefix() + "PingPong started.");
+                pingPong = new PingPong(serverManager);
+                pingPong.start();
+                Logger.Trace(GetLogPrefix() + "PingPong started.");
             }
             else
             {
@@ -394,15 +391,22 @@ public class ChatManager implements IDisposable
                         message.payload = inPayload;
                         serverManager.BroadcastMessage(message);
 
-                        //Also invoke the OnMessageReceived event.
-                        onMessageReceived.Invoke(inPayload);
+                        //If we (the server) are the sender then remove the message from the queue.
+                        //Otherwise invoke the OnMessageReceived event.
+                        if (inPayload.GetSender().equals(ServerManager.SERVER_UUID))
+                            ClearPendingMessage(inPayload.GetMessageID());
+                        else
+                            onMessageReceived.Invoke(inPayload);
                     }
                     else if (peers.containsKey(recipient) && peers.get(recipient).GetStatus() == EPeerStatus.CONNECTED)
                     {
-                        /*If the recipient is us (the server) then invoke the OnMessageReceived event.
-                         *Otherwise forward the message to the specified peer.*/
-                        if (recipient.equals(ServerManager.SERVER_UUID))
+                        //If the sender is us, remove the message from the queue.
+                        if (inPayload.GetSender().equals(ServerManager.SERVER_UUID))
+                            ClearPendingMessage(inPayload.GetMessageID());
+                        //Else if the recipient is us, invoke the OnMessageReceived event.
+                        else if (recipient.equals(ServerManager.SERVER_UUID))
                             onMessageReceived.Invoke(inPayload);
+                        //Otherwise forward the message to the specified peer.
                         else
                             serverManager.SendMessage(recipient, netMessage);
                     }
@@ -545,26 +549,13 @@ public class ChatManager implements IDisposable
 
                     UUID messageID = inPayload.GetMessageID();
                     UUID sender = inPayload.GetSender();
-                    UUID recipient = inPayload.GetRecipient();
 
                     //If the sender is us, we can use this response to verify that the message was sent.
+                    //Otherwise we can invoke the message event.
                     if (sender.equals(id))
-                    {
-                        if (!pendingMessages.containsKey(messageID))
-                            return;
-
-                        pendingMessages.get(messageID).Set();
-                        pendingMessages.remove(messageID);
-                    }
+                        ClearPendingMessage(messageID);
                     else
-                    {
-                        //Verify that the message should be read by us.
-                        if (!recipient.equals(ServerManager.INVALID_UUID) || !recipient.equals(id))
-                            return;
-
-                        //Fire the message event.
                         onMessageReceived.Invoke(inPayload);
-                    }
 
                     break;
                 }
@@ -784,6 +775,14 @@ public class ChatManager implements IDisposable
             //Remove the message from the pending messages list.
             pendingMessages.remove(payload.GetMessageID());
         }
+    }
+
+    private void ClearPendingMessage(UUID messageID)
+    {
+        if (!pendingMessages.containsKey(messageID))
+            return;
+        pendingMessages.get(messageID).Set();
+        pendingMessages.remove(messageID);
     }
     //#endregion
 }
