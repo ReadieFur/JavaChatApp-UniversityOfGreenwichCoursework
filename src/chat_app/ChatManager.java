@@ -585,7 +585,7 @@ public class ChatManager implements IDisposable
                 return;
 
             Logger.Trace(GetLogPrefix() + "Connection closed: " + uuid);
-            ServerPeer oldPeer = (ServerPeer)peers.get(uuid);
+            Peer oldPeer = peers.get(uuid);
 
             if (isHost)
             {
@@ -600,7 +600,8 @@ public class ChatManager implements IDisposable
                 if (oldPeer.GetStatus() != EPeerStatus.CONNECTED)
                     return;
 
-                oldPeer.SetStatus(EPeerStatus.DISCONNECTED);
+                //The oldPeer variable will be a ServerPeer object at this level.
+                ((ServerPeer)oldPeer).SetStatus(EPeerStatus.DISCONNECTED);
 
                 Logger.Debug(GetLogPrefix() + "Client disconnected: " + uuid + " (" + oldPeer.GetUsername() + ")");
                 Logger.Info(GetLogPrefix() + "Client disconnected: " + oldPeer.GetUsername());
@@ -608,7 +609,7 @@ public class ChatManager implements IDisposable
                 //Broadcast the disconnected peer to all other clients.
                 NetMessage<Peer> peerBroadcast = new NetMessage<>();
                 peerBroadcast.type = EType.PEER;
-                peerBroadcast.payload = ServerPeer.ToPeer(oldPeer);
+                peerBroadcast.payload = ServerPeer.ToPeer(((ServerPeer)oldPeer));
                 serverManager.BroadcastMessage(peerBroadcast);
             }
             else
