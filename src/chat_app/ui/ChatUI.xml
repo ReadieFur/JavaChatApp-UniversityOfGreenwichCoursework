@@ -16,7 +16,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- #region Clients list -->
-        <Scrollable Grid.Column="0" Margin="4,4,4,2">
+        <Scrollable Name="clientListContainer" Grid.Column="0" Margin="4,4,4,2">
             <StackPanel Name="clientList" Background="{Binding backgroundColourSecondary}">
 
                 <!-- #region Example content -->
@@ -38,7 +38,7 @@
             </Grid.RowDefinitions>
 
             <!-- #region Chat box -->
-            <Scrollable Name="chatBoxScroller" Grid.Row="0" Margin="4,4,2,4">
+            <Scrollable Name="chatBoxContainer" Grid.Row="0" Margin="4,4,2,4">
                 <!-- I am not using a text block for the messages because consistently having text appear at the bottom of the page would be a struggle.
                 Instead I will use a stack panel that is bottom aligned, the downside to this is that the nested TextBlocks cannot be multi-selected. -->
                 <StackPanel Name="chatBox" Background="{Binding backgroundColourTertiary}" Orientation="BottomToTop">

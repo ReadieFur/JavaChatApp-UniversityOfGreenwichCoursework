@@ -29,6 +29,7 @@ import chat_app.net_data.MessagePayload;
 import chat_app.net_data.NetMessage;
 import chat_app.net_data.PeersPayload;
 
+//TODO: Clean this class up as it is beginning to get a bit too messy, refractor the reuse of methods for two different purposes.
 public class ChatManager implements IDisposable
 {
     //#region Fields
@@ -181,12 +182,13 @@ public class ChatManager implements IDisposable
                 catch (UnknownHostException e) { serverAddress = fallbackServerIPAddress; }
 
                 id = ServerManager.SERVER_UUID;
-                Peer serverPeer = new ServerPeer(
+                ServerPeer serverPeer = new ServerPeer(
                     ServerManager.SERVER_UUID,
                     serverAddress,
                     desiredUsername,
                     EPeerStatus.CONNECTED);
                 peers.put(ServerManager.SERVER_UUID, serverPeer);
+                onPeerConnected.Invoke(ServerPeer.ToPeer(serverPeer));
 
                 serverManager.start();
                 Logger.Trace(GetLogPrefix() + "Server started.");
@@ -250,12 +252,20 @@ public class ChatManager implements IDisposable
             if (isHost)
             {
                 /*When a new client connects, we add them to the list of peers however we don't,
-                *indicate that the client is ready yet, we must wait for the handshake first.*/
-                peers.put(uuid, new ServerPeer(
-                    uuid,
-                    serverManager.GetClientHosts().get(uuid).GetSocket().getLocalAddress().getHostAddress(),
-                    desiredUsername,
-                    EPeerStatus.UNINITIALIZED));
+                 *indicate that the client is ready yet, we must wait for the handshake first.*/
+                if (!peers.containsKey(uuid))
+                {
+                    peers.put(uuid, new ServerPeer(
+                        uuid,
+                        serverManager.GetClientHosts().get(uuid).GetSocket().getLocalAddress().getHostAddress(),
+                        desiredUsername,
+                        EPeerStatus.UNINITIALIZED));
+                }
+                else
+                {
+                    //If the client was already in the list then the event will be fired for the client handshaking.
+                    onPeerConnected.Invoke(peers.get(uuid));
+                }
             }
             else
             {
@@ -274,11 +284,10 @@ public class ChatManager implements IDisposable
                 else
                 {
                     //The new peer will have been added in the OnNetMessage > Host > HANDSHAKE message.
-                    Logger.Info(GetLogPrefix() + "Peer connected: " + peers.get(uuid).GetUsername());
+                    Logger.Info(GetLogPrefix() + "Peer connected: " + peers.get(uuid).GetUsername() + (uuid.equals(id) ? " (You)" : ""));
+                    onPeerConnected.Invoke(peers.get(uuid));
                 }
             }
-
-            onPeerConnected.Invoke(peers.get(uuid));
         }
     }
 
@@ -346,6 +355,7 @@ public class ChatManager implements IDisposable
                     response.type = EType.HANDSHAKE;
                     response.payload = peer;
                     serverManager.SendMessage(data.item1, response);
+                    OnNetConnect(data.item1);
                     ///See: OnNetMessage > Client > HANDSHAKE
 
                     //Broadcast the new peer to all other peers.
@@ -471,8 +481,8 @@ public class ChatManager implements IDisposable
                         {
                             UUID payloadID = inPayload.GetUUID();
 
-                            //If the client wasn't in the list then fire the connect event (unless it is us or the server).
-                            Boolean isNewPeer = !payloadID.equals(id) && !payloadID.equals(ServerManager.SERVER_UUID) && !peers.containsKey(payloadID);
+                            //If the client wasn't in the list then fire the connect event (this includes us connecting to the server but not the server itself).
+                            Boolean isNewPeer = !payloadID.equals(ServerManager.SERVER_UUID) && !peers.containsKey(payloadID);
 
                             //Update the peer in the list (this should be added before the OnNetConnect event is fired).
                             /*Notice how there is no synchronize block here, this is because I am using a ConcurrentHashMap which is synchronized
@@ -528,9 +538,9 @@ public class ChatManager implements IDisposable
 
                         peers.put(peerUUID, peer);
 
-                        //If the client wasn't in the list then fire the connect event (unless it is us or the server).
-                        if (!peerUUID.equals(id) && !peerUUID.equals(ServerManager.SERVER_UUID) && !oldPeers.containsKey(peerUUID))
-                            OnNetConnect(peer.GetUUID());
+                        //We don't need to check the state of the peer as they should always be connected at this point.
+                        if (!peerUUID.equals(ServerManager.SERVER_UUID) && !peers.containsKey(peerUUID))
+                            OnNetConnect(peerUUID);
                     }
 
                     /*If the client was in the old list but not the new one, fire the disconnect event.
@@ -610,6 +620,8 @@ public class ChatManager implements IDisposable
                 if (uuid.equals(ServerManager.SERVER_UUID))
                 {
                     Logger.Info(GetLogPrefix() + "Disconnected from server.");
+                    //In this case we need to invoke the disconnect event before restarting.
+                    onPeerDisconnected.Invoke(oldPeer);
                     Restart();
                     return;
                 }

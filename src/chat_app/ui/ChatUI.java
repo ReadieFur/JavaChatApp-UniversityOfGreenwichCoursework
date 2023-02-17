@@ -3,6 +3,8 @@ package chat_app.ui;
 import java.awt.Color;
 import java.awt.GridBagConstraints;
 import java.io.IOException;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.swing.plaf.InsetsUIResource;
 import javax.xml.parsers.ParserConfigurationException;
@@ -17,6 +19,7 @@ import readiefur.xml_ui.attributes.EventCallbackAttribute;
 import readiefur.xml_ui.attributes.NamedComponentAttribute;
 import readiefur.xml_ui.controls.Grid;
 import readiefur.xml_ui.controls.Label;
+import readiefur.xml_ui.controls.Scrollable;
 import readiefur.xml_ui.controls.StackPanel;
 import readiefur.xml_ui.controls.TextBlock;
 import readiefur.xml_ui.controls.TextBox;
@@ -35,12 +38,15 @@ public class ChatUI extends XMLUI<Window>
     @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_TERTIARY) private Observable<String> backgroundColourTertiary;
     @BindingAttribute(DefaultValue = Themes.LIGHT_FOREGROUND) private Observable<String> foregroundColour;
 
+    @NamedComponentAttribute private Scrollable clientListContainer;
     @NamedComponentAttribute private StackPanel clientList;
+    @NamedComponentAttribute private Scrollable chatBoxContainer;
     @NamedComponentAttribute private StackPanel chatBox;
     @NamedComponentAttribute private TextBox inputBox;
     //#endregion
 
     private final ChatManager chatManager;
+    private final ConcurrentHashMap<UUID, Grid> clientEntries = new ConcurrentHashMap<>();
 
     public ChatUI(ChatManager chatManager)
         throws IllegalArgumentException, IllegalAccessException, IOException, ParserConfigurationException, SAXException, InvalidXMLException
@@ -69,6 +75,10 @@ public class ChatUI extends XMLUI<Window>
             if (e.getKeyCode() == 10)
                 SendButton_OnClick(null);
         });
+
+        //Add existing clients to the client list (some will be missed between the time of the ChatManager starting and the UI being created).
+        for (Peer peer : chatManager.GetPeers().values())
+            CreateClientEntry(peer);
     }
 
     //#region Window methods
@@ -86,11 +96,43 @@ public class ChatUI extends XMLUI<Window>
     //#region Chat manager events
     private void ChatManager_OnPeerConnected(Peer peer)
     {
+        if (peer.GetUUID().equals(ServerManager.SERVER_UUID))
+        {
+            //TODO: Handle server connect.
+        }
+
+        //If we are the server, show server-only properties, otherwise hide them.
+        if (chatManager.GetID().equals(ServerManager.SERVER_UUID))
+        {
+            //TODO: Show server-only properties.
+        }
+        else
+        {
+            //TODO: Hide server-only properties.
+        }
+
         CreateClientEntry(peer);
     }
 
     private void ChatManager_OnPeerDisconnected(Peer peer)
     {
+        if (peer.GetUUID().equals(ServerManager.SERVER_UUID))
+        {
+            //TODO: Handle server disconnect.
+        }
+
+        synchronized (clientEntries)
+        {
+            UUID peerID = peer.GetUUID();
+
+            if (!clientEntries.containsKey(peerID))
+                return;
+
+            Grid clientEntry = clientEntries.get(peerID);
+            clientEntries.remove(peerID);
+            clientList.RemoveChild(clientEntry);
+            clientListContainer.revalidate();
+        }
     }
 
     private void ChatManager_OnMessageReceived(MessagePayload message)
@@ -132,41 +174,54 @@ public class ChatUI extends XMLUI<Window>
     //#region Builders
     private Grid CreateClientEntry(Peer peer)
     {
-        //TODO: Get XML pages working and expose more generic setter methods on the Control classes.
-        Grid container = new Grid();
-        container.setOpaque(true);
-        container.setBackground(Color.decode(backgroundColourTertiary.Get()));
-        backgroundColourTertiary.AddListener(newValue -> container.setBackground(Color.decode(newValue)));
+        synchronized (clientEntries)
+        {
+            UUID peerID = peer.GetUUID();
 
-        GridBagConstraints containerConstraints = new GridBagConstraints();
-        containerConstraints.insets = new InsetsUIResource(4, 4, 2, 4);
+            //Prevent duplicate entries.
+            if (clientEntries.containsKey(peerID))
+                return clientEntries.get(peerID);
 
-        GridBagConstraints labelConstraints = new GridBagConstraints();
-        labelConstraints.weightx = 1;
-        labelConstraints.weighty = 1;
-        labelConstraints.fill = GridBagConstraints.VERTICAL;
-        labelConstraints.insets = new InsetsUIResource(4, 4, 4, 4);
+            //TODO: Get XML pages working and expose more generic setter methods on the Control classes.
+            Grid container = new Grid();
+            container.setOpaque(true);
+            container.setBackground(Color.decode(backgroundColourTertiary.Get()));
+            backgroundColourTertiary.AddListener(newValue -> container.setBackground(Color.decode(newValue)));
 
-        Label usernameLabel = new Label();
-        usernameLabel.setText(peer.GetUsername());
-        usernameLabel.setForeground(Color.decode(foregroundColour.Get()));
-        foregroundColour.AddListener(newValue -> usernameLabel.setForeground(Color.decode(newValue)));
-        labelConstraints.anchor = GridBagConstraints.WEST;
-        container.add(usernameLabel, labelConstraints);
+            GridBagConstraints containerConstraints = new GridBagConstraints();
+            containerConstraints.insets = new InsetsUIResource(4, 4, 2, 4);
 
-        Label statusLabel = new Label();
-        statusLabel.setText(peer.GetIPAddress());
-        statusLabel.setForeground(Color.decode(foregroundColour.Get()));
-        foregroundColour.AddListener(newValue -> statusLabel.setForeground(Color.decode(newValue)));
-        labelConstraints.anchor = GridBagConstraints.EAST;
-        container.add(statusLabel, labelConstraints);
+            GridBagConstraints labelConstraints = new GridBagConstraints();
+            labelConstraints.weightx = 1;
+            labelConstraints.weighty = 1;
+            labelConstraints.fill = GridBagConstraints.VERTICAL;
+            labelConstraints.insets = new InsetsUIResource(4, 4, 4, 4);
 
-        //Hide the status label by default.
-        statusLabel.setVisible(false);
+            Label usernameLabel = new Label();
+            usernameLabel.setText(peer.GetUsername() + (peerID.equals(chatManager.GetID()) ? " (You)" : ""));
+            usernameLabel.setForeground(Color.decode(foregroundColour.Get()));
+            foregroundColour.AddListener(newValue -> usernameLabel.setForeground(Color.decode(newValue)));
+            labelConstraints.anchor = GridBagConstraints.WEST;
+            container.add(usernameLabel, labelConstraints);
 
-        clientList.AddChild(container, containerConstraints);
+            Label statusLabel = new Label();
+            statusLabel.setText(peer.GetIPAddress());
+            statusLabel.setForeground(Color.decode(foregroundColour.Get()));
+            foregroundColour.AddListener(newValue -> statusLabel.setForeground(Color.decode(newValue)));
+            labelConstraints.anchor = GridBagConstraints.EAST;
+            container.add(statusLabel, labelConstraints);
 
-        return container;
+            //Hide the status label by default.
+            statusLabel.setVisible(false);
+
+            clientList.AddChild(container, containerConstraints);
+
+            //Refresh the scroller.
+            clientListContainer.revalidate();
+
+            clientEntries.put(peerID, container);
+            return container;
+        }
     }
 
     private TextBlock CreateChatEntry(String sender, String message)
@@ -184,6 +239,10 @@ public class ChatUI extends XMLUI<Window>
         constraints.insets = new InsetsUIResource(0, 0, 2, 0);
 
         chatBox.AddChild(textBlock, constraints);
+
+        //It is also important to refresh the scroll pane so that if needed, the scroll bar will be updated. Then also scroll to the bottom.
+        chatBoxContainer.revalidate();
+        chatBoxContainer.getVerticalScrollBar().setValue(chatBoxContainer.getVerticalScrollBar().getMaximum());
 
         return textBlock;
     }
