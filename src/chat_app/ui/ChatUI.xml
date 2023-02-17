@@ -21,8 +21,8 @@
 
                 <!-- #region Example content -->
                 <!-- <Grid Background="{Binding backgroundColourTertiary}" Margin="4,4,2,4">
-                    <Label Text="Client" Foreground="{Binding foregroundColour}" HorizontalAlignment="Left" Margin="{Resource clientEntryTextMargin}"/>
-                    <Label Text="IP" Foreground="{Binding foregroundColour}" HorizontalAlignment="Right" Margin="{Resource clientEntryTextMargin}"/>
+                    <Label Text="Client" Foreground="{Binding foregroundColourPrimary}" HorizontalAlignment="Left" Margin="{Resource clientEntryTextMargin}"/>
+                    <Label Text="IP" Foreground="{Binding foregroundColourPrimary}" HorizontalAlignment="Right" Margin="{Resource clientEntryTextMargin}"/>
                 </Grid> -->
                 <!-- #endregion -->
 
@@ -56,7 +56,7 @@
                     <ColumnDefinition Width="4px"/>
                 </Grid.ColumnDefinitions>
                 <TextBox Name="inputBox" Grid.Column="0" Background="{Binding backgroundColourTertiary}" Enabled="{Binding connectedToServer}"/>
-                <Button Name="sendButton" Grid.Column="1" Content="Send" Background="{Binding backgroundColourTertiary}" Foreground="{Binding foregroundColour}" Enabled="{Binding connectedToServer}" Click="SendButton_OnClick"/>
+                <Button Name="sendButton" Grid.Column="1" Content="Send" Background="{Binding backgroundColourTertiary}" Foreground="{Binding foregroundColourPrimary}" Enabled="{Binding connectedToServer}" Click="SendButton_OnClick"/>
             </Grid>
             <!-- #endregion -->
         </Grid>

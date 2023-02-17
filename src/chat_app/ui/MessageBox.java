@@ -47,7 +47,7 @@ public class MessageBox extends XMLUI<Window>
     //#region Instance
     @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_PRIMARY)
     private Observable<String> backgroundColour;
-    @BindingAttribute(DefaultValue = Themes.LIGHT_FOREGROUND)
+    @BindingAttribute(DefaultValue = Themes.LIGHT_FOREGROUND_PRIMARY)
     private Observable<String> foregroundColour;
 
     @NamedComponentAttribute

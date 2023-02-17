@@ -37,7 +37,8 @@ public class ChatUI extends XMLUI<Window>
     @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_PRIMARY) private Observable<String> backgroundColourPrimary;
     @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_SECONDARY) private Observable<String> backgroundColourSecondary;
     @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_TERTIARY) private Observable<String> backgroundColourTertiary;
-    @BindingAttribute(DefaultValue = Themes.LIGHT_FOREGROUND) private Observable<String> foregroundColour;
+    @BindingAttribute(DefaultValue = Themes.LIGHT_FOREGROUND_PRIMARY) private Observable<String> foregroundColourPrimary;
+    @BindingAttribute(DefaultValue = Themes.LIGHT_FOREGROUND_SECONDARY) private Observable<String> foregroundColourSecondary;
     @BindingAttribute(DefaultValue = "false") private Observable<String> connectedToServer;
 
     @NamedComponentAttribute private Scrollable clientListContainer;
@@ -101,13 +102,17 @@ public class ChatUI extends XMLUI<Window>
     {
         if (peer.GetUUID().equals(ServerManager.SERVER_UUID))
         {
-            //TODO: Handle server connect.
+            if (chatManager.IsHost())
+                CreateSystemMessage("Promoted to host.");
+            else
+                CreateSystemMessage("Connected to server.");
+
             //Changing this property will trigger the bindings on connectedToServer, which in my case will enable/disable UI elements.
             connectedToServer.Set("true");
         }
 
         //If we are the server, show server-only properties, otherwise hide them.
-        if (chatManager.GetID().equals(ServerManager.SERVER_UUID))
+        if (chatManager.IsHost())
         {
             //TODO: Show server-only properties.
         }
@@ -125,11 +130,12 @@ public class ChatUI extends XMLUI<Window>
 
         if (peerID.equals(ServerManager.SERVER_UUID))
         {
-            //TODO: Handle server disconnect.
-            for (UUID id : chatManager.GetPeers().keySet())
-                RemoveClientEntry(id);
+            CreateSystemMessage("Disconnected from server.");
 
             connectedToServer.Set("false");
+
+            for (UUID id : chatManager.GetPeers().keySet())
+                RemoveClientEntry(id);
         }
         else
         {
@@ -139,7 +145,7 @@ public class ChatUI extends XMLUI<Window>
 
     private void ChatManager_OnMessageReceived(MessagePayload message)
     {
-        CreateChatEntry(chatManager.GetPeers().get(message.GetSender()).GetUsername(), message.GetMessage());
+        CreateChatMessage(chatManager.GetPeers().get(message.GetSender()).GetUsername(), message.GetMessage());
     }
     //#endregion
 
@@ -154,8 +160,8 @@ public class ChatUI extends XMLUI<Window>
         if (message.isEmpty())
             return;
 
-        TextBlock chatEntry = CreateChatEntry(chatManager.GetPeers().get(chatManager.GetID()).GetUsername(), message);
-        chatEntry.setForeground(Color.decode(backgroundColourSecondary.Get()));
+        TextBlock chatEntry = CreateChatMessage(chatManager.GetPeers().get(chatManager.GetID()).GetUsername(), message);
+        chatEntry.setForeground(Color.decode(foregroundColourSecondary.Get()));
 
         //TODO: Message contexts (i.e. private messages).
         Boolean success = chatManager.SendMessageSync(ServerManager.INVALID_UUID, message);
@@ -164,7 +170,7 @@ public class ChatUI extends XMLUI<Window>
         {
             //If the message sent successfully, change the colour back to the default.
             //TODO: Move the message to the bottom of the chat box as this is where it will be for the rest of the clients.
-            chatEntry.setForeground(Color.decode(foregroundColour.Get()));
+            chatEntry.setForeground(Color.decode(foregroundColourPrimary.Get()));
         }
         else
         {
@@ -184,6 +190,10 @@ public class ChatUI extends XMLUI<Window>
             if (clientEntries.containsKey(peerID))
                 return clientEntries.get(peerID);
 
+            String username = peer.GetUsername() + (peerID.equals(chatManager.GetID()) ? " (You)" : "");
+
+            CreateSystemMessage(username + " connected.");
+
             //TODO: Get XML pages working and expose more generic setter methods on the Control classes.
             Grid container = new Grid();
             container.setOpaque(true);
@@ -200,16 +210,16 @@ public class ChatUI extends XMLUI<Window>
             labelConstraints.insets = new InsetsUIResource(4, 4, 4, 4);
 
             Label usernameLabel = new Label();
-            usernameLabel.setText(peer.GetUsername() + (peerID.equals(chatManager.GetID()) ? " (You)" : ""));
-            usernameLabel.setForeground(Color.decode(foregroundColour.Get()));
-            foregroundColour.AddListener(newValue -> usernameLabel.setForeground(Color.decode(newValue)));
+            usernameLabel.setText(username);
+            usernameLabel.setForeground(Color.decode(foregroundColourPrimary.Get()));
+            foregroundColourPrimary.AddListener(newValue -> usernameLabel.setForeground(Color.decode(newValue)));
             labelConstraints.anchor = GridBagConstraints.WEST;
             container.add(usernameLabel, labelConstraints);
 
             Label statusLabel = new Label();
             statusLabel.setText(peer.GetIPAddress());
-            statusLabel.setForeground(Color.decode(foregroundColour.Get()));
-            foregroundColour.AddListener(newValue -> statusLabel.setForeground(Color.decode(newValue)));
+            statusLabel.setForeground(Color.decode(foregroundColourPrimary.Get()));
+            foregroundColourPrimary.AddListener(newValue -> statusLabel.setForeground(Color.decode(newValue)));
             labelConstraints.anchor = GridBagConstraints.EAST;
             container.add(statusLabel, labelConstraints);
 
@@ -240,16 +250,33 @@ public class ChatUI extends XMLUI<Window>
         }
     }
 
-    private TextBlock CreateChatEntry(String sender, String message)
+    private TextBlock CreateSystemMessage(String message)
+    {
+        TextBlock textBlock = CreateChatEntry("==== " + message + " ====");
+
+        foregroundColourPrimary.RemoveListener(newValue -> textBlock.setForeground(Color.decode(newValue)));
+
+        textBlock.setForeground(Color.decode(foregroundColourSecondary.Get()));
+        foregroundColourSecondary.AddListener(newValue -> textBlock.setForeground(Color.decode(newValue)));
+
+        return textBlock;
+    }
+
+    private TextBlock CreateChatMessage(String sender, String message)
+    {
+        return CreateChatEntry("[" + sender + "]: " + message);
+    }
+
+    private TextBlock CreateChatEntry(String message)
     {
         TextBlock textBlock = new TextBlock();
-        textBlock.SetContent("[" + sender + "]: " + message);
+        textBlock.SetContent(message);
         textBlock.setEditable(false);
         textBlock.setLineWrap(true);
         textBlock.setBackground(Color.decode(backgroundColourTertiary.Get()));
         backgroundColourTertiary.AddListener(newValue -> textBlock.setBackground(Color.decode(newValue)));
-        textBlock.setForeground(Color.decode(foregroundColour.Get()));
-        foregroundColour.AddListener(newValue -> textBlock.setForeground(Color.decode(newValue)));
+        textBlock.setForeground(Color.decode(foregroundColourPrimary.Get()));
+        foregroundColourPrimary.AddListener(newValue -> textBlock.setForeground(Color.decode(newValue)));
 
         GridBagConstraints constraints = new GridBagConstraints();
         constraints.insets = new InsetsUIResource(0, 0, 2, 0);

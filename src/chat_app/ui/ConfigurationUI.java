@@ -28,7 +28,7 @@ public class ConfigurationUI extends XMLUI<Window>
     private Observable<String> backgroundColour;
     @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_SECONDARY)
     private Observable<String> backgroundColourAlt;
-    @BindingAttribute(DefaultValue = Themes.LIGHT_FOREGROUND)
+    @BindingAttribute(DefaultValue = Themes.LIGHT_FOREGROUND_PRIMARY)
     private Observable<String> foregroundColour;
 
     private String defaultServerAddress;
