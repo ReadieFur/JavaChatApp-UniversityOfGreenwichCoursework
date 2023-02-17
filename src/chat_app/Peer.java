@@ -3,8 +3,9 @@ package chat_app;
 import java.io.Serializable;
 import java.util.UUID;
 
-import chat_app.net_data.EPeerStatus;
 import readiefur.sockets.ServerManager;
+
+import chat_app.net_data.EPeerStatus;
 
 public class Peer implements Serializable
 {

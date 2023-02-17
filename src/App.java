@@ -5,14 +5,15 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
+import readiefur.console.ELogLevel;
+import readiefur.console.Logger;
+import readiefur.xml_ui.exceptions.InvalidXMLException;
+
 import chat_app.ChatManager;
 import chat_app.ui.ChatUI;
 import chat_app.ui.ConfigurationUI;
 import chat_app.ui.EMessageBoxButtons;
 import chat_app.ui.MessageBox;
-import readiefur.console.ELogLevel;
-import readiefur.console.Logger;
-import readiefur.xml_ui.exceptions.InvalidXMLException;
 
 public class App
 {

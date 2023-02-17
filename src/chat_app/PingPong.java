@@ -3,12 +3,13 @@ package chat_app;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import chat_app.net_data.EType;
-import chat_app.net_data.EmptyPayload;
-import chat_app.net_data.NetMessage;
 import readiefur.misc.Pair;
 import readiefur.sockets.ServerClientHost;
 import readiefur.sockets.ServerManager;
+
+import chat_app.net_data.EType;
+import chat_app.net_data.EmptyPayload;
+import chat_app.net_data.NetMessage;
 
 public class PingPong extends Thread
 {

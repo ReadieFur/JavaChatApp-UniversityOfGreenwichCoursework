@@ -14,12 +14,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
-import chat_app.net_data.EPeerStatus;
-import chat_app.net_data.EType;
-import chat_app.net_data.EmptyPayload;
-import chat_app.net_data.MessagePayload;
-import chat_app.net_data.NetMessage;
-import chat_app.net_data.PeersPayload;
 import readiefur.console.Logger;
 import readiefur.misc.Event;
 import readiefur.misc.IDisposable;
@@ -27,6 +21,13 @@ import readiefur.misc.ManualResetEvent;
 import readiefur.misc.Pair;
 import readiefur.sockets.Client;
 import readiefur.sockets.ServerManager;
+
+import chat_app.net_data.EPeerStatus;
+import chat_app.net_data.EType;
+import chat_app.net_data.EmptyPayload;
+import chat_app.net_data.MessagePayload;
+import chat_app.net_data.NetMessage;
+import chat_app.net_data.PeersPayload;
 
 public class ChatManager implements IDisposable
 {

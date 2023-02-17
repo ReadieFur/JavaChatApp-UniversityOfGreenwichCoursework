@@ -2,7 +2,6 @@ package chat_app.ui;
 
 import java.awt.Color;
 import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.io.IOException;
 
 import javax.swing.plaf.InsetsUIResource;
@@ -10,9 +9,6 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
-import chat_app.ChatManager;
-import chat_app.Peer;
-import chat_app.net_data.MessagePayload;
 import readiefur.sockets.ServerManager;
 import readiefur.xml_ui.Observable;
 import readiefur.xml_ui.XMLUI;
@@ -26,6 +22,10 @@ import readiefur.xml_ui.controls.TextBlock;
 import readiefur.xml_ui.controls.TextBox;
 import readiefur.xml_ui.controls.Window;
 import readiefur.xml_ui.exceptions.InvalidXMLException;
+
+import chat_app.ChatManager;
+import chat_app.Peer;
+import chat_app.net_data.MessagePayload;
 
 public class ChatUI extends XMLUI<Window>
 {
