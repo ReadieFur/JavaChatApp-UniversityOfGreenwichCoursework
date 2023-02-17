@@ -18,8 +18,6 @@ import readiefur.xml_ui.attributes.BindingAttribute;
 import readiefur.xml_ui.attributes.EventCallbackAttribute;
 import readiefur.xml_ui.attributes.NamedComponentAttribute;
 import readiefur.xml_ui.controls.Button;
-import readiefur.xml_ui.controls.Grid;
-import readiefur.xml_ui.controls.Label;
 import readiefur.xml_ui.controls.Scrollable;
 import readiefur.xml_ui.controls.StackPanel;
 import readiefur.xml_ui.controls.TextBlock;
