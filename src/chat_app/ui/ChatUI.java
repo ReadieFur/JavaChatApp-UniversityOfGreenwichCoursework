@@ -195,7 +195,8 @@ public class ChatUI extends XMLUI<Window>
         }
         else
         {
-            //TODO: Notify that the chat has unreads.
+            //Update the unreads count for this chat.
+            clientEntries.get(groupID).IncrementUnreads();
         }
     }
     //#endregion
@@ -339,27 +340,28 @@ public class ChatUI extends XMLUI<Window>
         chatBoxContainer.getVerticalScrollBar().setValue(chatBoxContainer.getVerticalScrollBar().getMaximum());
     }
 
-    private void SetActiveChat(UUID id)
+    private void SetActiveChat(UUID chatID)
     {
-        //If the chat is already active or the desired new chat is us, don't do anything.
-        if (activeChat.equals(id) || id.equals(chatManager.GetID()))
+        //If the ID doesn't exist or the chat is already active or the desired new chat is us, don't do anything.
+        if (!clientEntries.containsKey(chatID) || activeChat.equals(chatID) || chatID.equals(chatManager.GetID()))
             return;
 
         //Update the old chat entry's background colour.
-        if (clientEntries.containsKey(activeChat))
-            clientEntries.get(activeChat).setBackground(Color.decode(backgroundColourTertiary.Get()));
+        clientEntries.get(activeChat).setBackground(Color.decode(backgroundColourTertiary.Get()));
 
-        activeChat = id;
+        activeChat = chatID;
         chatBox.removeAll();
 
+        ClientEntry clientEntry = clientEntries.get(chatID);
         //Update the new chat entry's background colour.
-        if (clientEntries.containsKey(activeChat))
-            clientEntries.get(activeChat).setBackground(Color.decode(Themes.ACCENT_PRIMARY));
+        clientEntry.setBackground(Color.decode(Themes.ACCENT_PRIMARY));
+        //Reset the unreads count.
+        clientEntry.ClearUnreads();
 
         //Add the messages for the selected client.
-        if (messageGroups.containsKey(id))
+        if (messageGroups.containsKey(chatID))
         {
-            for (TextBlock entry : messageGroups.get(id))
+            for (TextBlock entry : messageGroups.get(chatID))
                 AddChatEntry(entry);
         }
 

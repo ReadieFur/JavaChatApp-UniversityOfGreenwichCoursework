@@ -3,7 +3,6 @@ package readiefur.xml_ui.controls;
 import java.awt.Component;
 import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JLabel;
@@ -18,11 +17,12 @@ import readiefur.xml_ui.factory.UIBuilderFactory;
 
 public class StackPanel extends JPanel
 {
-    private static final String ORIENTATION = "Orientation";
-    private static final String ORIENTATION_LEFT_TO_RIGHT = "LeftToRight";
-    private static final String ORIENTATION_TOP_TO_BOTTOM = "TopToBottom";
-    private static final String ORIENTATION_RIGHT_TO_LEFT = "RightToLeft";
-    private static final String ORIENTATION_BOTTOM_TO_TOP = "BottomToTop";
+    public static final String ORIENTATION = "Orientation";
+    public static final String ORIENTATION_LEFT_TO_RIGHT = "LeftToRight";
+    public static final String ORIENTATION_TOP_TO_BOTTOM = "TopToBottom";
+    public static final String ORIENTATION_RIGHT_TO_LEFT = "RightToLeft";
+    public static final String ORIENTATION_BOTTOM_TO_TOP = "BottomToTop";
+
     private static final String FILLER_COMPONENT = "fillerComponent";
 
     public StackPanel()
