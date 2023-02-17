@@ -49,6 +49,7 @@ public class ChatUI extends XMLUI<Window>
     //#endregion
 
     private final ChatManager chatManager;
+    private int connectedClients = 0; //More efficient to store this value than to call chatManager.GetPeers().size() every time.
     private final ConcurrentHashMap<UUID, ClientEntry> clientEntries = new ConcurrentHashMap<>();
     /*A slight flaw can occur here, if the server restarts, everyone will have a new UUID.
      *This is a problem because if I want to store chats by user ID, the chats won't be accessible after server resets.
@@ -64,8 +65,6 @@ public class ChatUI extends XMLUI<Window>
         super();
 
         this.chatManager = chatManager;
-
-        //TODO: Add status information to the title bar.
 
         //Create the broadcast chat entry.
         messageGroups.put(ServerManager.INVALID_UUID, new ArrayList<>());
@@ -130,6 +129,8 @@ public class ChatUI extends XMLUI<Window>
             connectedToServer.Set("true");
         }
 
+        connectedClients++;
+        SetTitleDetailPeers();
         CreateClientEntry(peer);
     }
 
@@ -141,6 +142,8 @@ public class ChatUI extends XMLUI<Window>
         {
             CreateSystemMessage("Disconnected from server.");
             CreateSystemMessage("Reconnecting...");
+            connectedClients = 0;
+            SetTitleDetailStatus("Reconnecting...");
 
             connectedToServer.Set("false");
 
@@ -170,6 +173,8 @@ public class ChatUI extends XMLUI<Window>
         else
         {
             CreateSystemMessage(peer.GetUsername() + " disconnected.");
+            connectedClients--;
+            SetTitleDetailPeers();
             RemoveClientEntry(peerID);
         }
     }
@@ -371,6 +376,22 @@ public class ChatUI extends XMLUI<Window>
         chatBox.repaint();
         //Refresh the chat box container, we don't do this during the removal of the entries as it would just be wasting CPU cycles.
         RefreshChatBox();
+    }
+    //#endregion
+
+    //#region Misc
+    private void SetTitleDetailStatus(String detail)
+    {
+        rootComponent.setTitle("ChatApp | " + detail);
+    }
+
+    private void SetTitleDetailPeers()
+    {
+        String username = chatManager.GetPeers().get(chatManager.GetID()).GetUsername();
+        String isHost = "(" + (chatManager.IsHost() ? "Host" : "Client") + ")";
+        String peers = "Peers: " + connectedClients;
+
+        rootComponent.setTitle("ChatApp | " + username + " " + isHost + " - " + peers);
     }
     //#endregion
 }
