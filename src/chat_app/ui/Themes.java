@@ -1,4 +1,4 @@
-package ui;
+package chat_app.ui;
 
 public class Themes
 {

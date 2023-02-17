@@ -6,13 +6,13 @@ import javax.xml.parsers.ParserConfigurationException;
 import org.xml.sax.SAXException;
 
 import chat_app.ChatManager;
+import chat_app.ui.ChatUI;
+import chat_app.ui.ConfigurationUI;
+import chat_app.ui.EMessageBoxButtons;
+import chat_app.ui.MessageBox;
 import readiefur.console.ELogLevel;
 import readiefur.console.Logger;
 import readiefur.xml_ui.exceptions.InvalidXMLException;
-import ui.ChatUI;
-import ui.ConfigurationUI;
-import ui.EMessageBoxButtons;
-import ui.MessageBox;
 
 public class App
 {

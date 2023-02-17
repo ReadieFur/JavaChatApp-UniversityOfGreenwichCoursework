@@ -1,4 +1,4 @@
-package ui;
+package chat_app.ui;
 
 import java.awt.Color;
 import java.awt.GridBagConstraints;
