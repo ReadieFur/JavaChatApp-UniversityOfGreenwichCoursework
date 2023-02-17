@@ -387,11 +387,18 @@ public class ChatUI extends XMLUI<Window>
 
     private void SetTitleDetailPeers()
     {
-        String username = chatManager.GetPeers().get(chatManager.GetID()).GetUsername();
-        String isHost = "(" + (chatManager.IsHost() ? "Host" : "Client") + ")";
-        String peers = "Peers: " + connectedClients;
+        try
+        {
+            String username = chatManager.GetPeers().get(chatManager.GetID()).GetUsername();
+            String isHost = "(" + (chatManager.IsHost() ? "Host" : "Client") + ")";
+            String peers = "Peers: " + connectedClients;
 
-        rootComponent.setTitle("ChatApp | " + username + " " + isHost + " - " + peers);
+            rootComponent.setTitle("ChatApp | " + username + " " + isHost + " - " + peers);
+        }
+        catch (Exception ex)
+        {
+            rootComponent.setTitle("ChatApp");
+        }
     }
     //#endregion
 }

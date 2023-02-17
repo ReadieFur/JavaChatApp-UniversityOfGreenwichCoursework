@@ -43,6 +43,7 @@ public class ChatManager implements IDisposable
     private final int port;
     private final String desiredUsername;
     private int failedRestarts = 0;
+    private Boolean isCleaningUp = false; //Required due to event loops in cleanup.
 
     //Server specific properties.
     private ServerManager serverManager = null;
@@ -96,28 +97,57 @@ public class ChatManager implements IDisposable
 
     private void Cleanup()
     {
+        isCleaningUp = true;
+
         //Server related.
         if (serverManager != null)
         {
+            serverManager.onConnect.Remove(this::OnNetConnect);
+            serverManager.onMessage.Remove(this::OnNetMessage);
+            serverManager.onClose.Remove(this::OnNetClose);
+            serverManager.onError.Remove(this::OnNetError);
+
             serverManager.Dispose();
+
+            // //Wait for the thread to finish.
+            // try { serverManager.join(); }
+            // catch (InterruptedException e) { Logger.Error("Failed to join server manager thread."); }
+
             serverManager = null;
         }
         if (pingPong != null)
         {
             pingPong.interrupt();
+
+            // //Wait for the thread to finish.
+            // try { pingPong.join(); }
+            // catch (InterruptedException e) { Logger.Error("Failed to join ping pong thread."); }
+
             pingPong = null;
         }
 
         //Client related.
         if (client != null)
         {
+            client.onConnect.Remove(nul -> OnNetConnect(ServerManager.SERVER_UUID));
+            client.onMessage.Remove(data -> OnNetMessage(new Pair<>(ServerManager.SERVER_UUID, data)));
+            client.onClose.Remove(nul -> OnNetClose(ServerManager.SERVER_UUID));
+            client.onError.Remove(error -> OnNetError(new Pair<>(ServerManager.SERVER_UUID, error)));
+
             client.Dispose();
+
+            // //Wait for the thread to finish.
+            // try { client.join(); }
+            // catch (InterruptedException e) { Logger.Error("Failed to join client thread."); }
+
             client = null;
         }
 
         //Shared.
         id = null;
         peers.clear();
+
+        isCleaningUp = false;
     }
 
     private void Restart()
@@ -223,6 +253,7 @@ public class ChatManager implements IDisposable
                 Logger.Trace(GetLogPrefix() + "Server started.");
                 onPeerConnected.Invoke(ServerPeer.ToPeer(serverPeer));
 
+                //TODO: Ensure this gets enabled when finished with debugging.
                 // pingPong = new PingPong(serverManager);
                 // pingPong.start();
                 // Logger.Trace(GetLogPrefix() + "PingPong started.");
@@ -287,7 +318,7 @@ public class ChatManager implements IDisposable
     //#region Network Events
     private void OnNetConnect(UUID uuid)
     {
-        if (isDisposed)
+        if (isDisposed || isCleaningUp)
             return;
 
         Logger.Trace(GetLogPrefix() + "Connection opened: " + uuid);
@@ -342,7 +373,7 @@ public class ChatManager implements IDisposable
 
     private void OnNetMessage(Pair<UUID, Object> data)
     {
-        if (isDisposed)
+        if (isDisposed || isCleaningUp)
             return;
 
         NetMessage<?> netMessage = (NetMessage<?>)data.item2;
@@ -404,7 +435,6 @@ public class ChatManager implements IDisposable
                     response.type = EType.HANDSHAKE;
                     response.payload = peer;
                     serverManager.SendMessage(data.item1, response);
-                    OnNetConnect(data.item1);
                     ///See: OnNetMessage > Client > HANDSHAKE
 
                     //Broadcast the new peer to all other peers.
@@ -413,6 +443,8 @@ public class ChatManager implements IDisposable
                     peerBroadcast.payload = peer;
                     serverManager.BroadcastMessage(peerBroadcast);
                     ///See: OnNetMessage > Client > PEER
+
+                    OnNetConnect(data.item1);
 
                     break;
                 }
@@ -551,7 +583,7 @@ public class ChatManager implements IDisposable
                             UUID payloadID = inPayload.GetUUID();
 
                             //If the client wasn't in the list then fire the connect event (this includes us connecting to the server).
-                            Boolean isNewPeer = !peers.containsKey(payloadID);
+                            Boolean isNewPeer = !peers.containsKey(payloadID) && !payloadID.equals(ServerManager.SERVER_UUID);
 
                             //Update the peer in the list (this should be added before the OnNetConnect event is fired).
                             /*Notice how there is no synchronize block here, this is because I am using a ConcurrentHashMap which is synchronized
@@ -609,7 +641,9 @@ public class ChatManager implements IDisposable
 
                         //We don't need to check the state of the peer as they should always be connected at this point.
                         if (!oldPeers.containsKey(peerUUID))
+                        {
                             OnNetConnect(peerUUID);
+                        }
                     }
 
                     /*If the client was in the old list but not the new one, fire the disconnect event.
@@ -650,7 +684,7 @@ public class ChatManager implements IDisposable
 
     private void OnNetClose(UUID uuid)
     {
-        if (isDisposed)
+        if (isDisposed || isCleaningUp)
             return;
 
         Logger.Trace(GetLogPrefix() + "Connection closed: " + uuid);
