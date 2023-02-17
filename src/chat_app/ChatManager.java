@@ -193,9 +193,9 @@ public class ChatManager implements IDisposable
                 serverManager.start();
                 Logger.Trace(GetLogPrefix() + "Server started.");
 
-                pingPong = new PingPong(serverManager);
-                pingPong.start();
-                Logger.Trace(GetLogPrefix() + "PingPong started.");
+                // pingPong = new PingPong(serverManager);
+                // pingPong.start();
+                // Logger.Trace(GetLogPrefix() + "PingPong started.");
             }
             else
             {
@@ -218,6 +218,9 @@ public class ChatManager implements IDisposable
 
     private Boolean FindHost(String ipAddress, int port)
     {
+        if (ipAddress == null)
+            return false;
+
         Logger.Trace("Looking for host at " + ipAddress + ":" + port + "...");
 
         ManualResetEvent resetEvent = new ManualResetEvent(false);
@@ -385,15 +388,17 @@ public class ChatManager implements IDisposable
                 case MESSAGE:
                 {
                     //Occurs when a client sends a message to be processed by the server.
+
+                    //Ignore messages from clients who have not connected yet.
+                    if (peers.get(data.item1).GetStatus() != EPeerStatus.CONNECTED)
+                        return;
+
                     MessagePayload inPayload = (MessagePayload)netMessage.payload;
-
                     inPayload.SetSender(data.item1);
-
                     UUID recipient = inPayload.GetRecipient();
 
                     /*If the recipient is `INVALID_UUID` then broadcast the message to all peers.
                      *Otherwise check if the message is available to be sent to the specified peer.*/
-
                     if (recipient.equals(ServerManager.INVALID_UUID))
                     {
                         //Broadcast the message to all peers.
@@ -401,6 +406,7 @@ public class ChatManager implements IDisposable
                         message.type = EType.MESSAGE;
                         message.payload = inPayload;
                         serverManager.BroadcastMessage(message);
+                        //See: OnNetMessage > Host/Client > MESSAGE
 
                         //If we (the server) are the sender then remove the message from the queue.
                         //Otherwise invoke the OnMessageReceived event.
@@ -411,15 +417,31 @@ public class ChatManager implements IDisposable
                     }
                     else if (peers.containsKey(recipient) && peers.get(recipient).GetStatus() == EPeerStatus.CONNECTED)
                     {
-                        //If the sender is us, remove the message from the queue.
+                        //If the sender is us, forward the message to the recipient and remove the message from the queue.
                         if (inPayload.GetSender().equals(ServerManager.SERVER_UUID))
-                            ClearPendingMessage(inPayload.GetMessageID());
-                        //Else if the recipient is us, invoke the OnMessageReceived event.
-                        else if (recipient.equals(ServerManager.SERVER_UUID))
-                            onMessageReceived.Invoke(inPayload);
-                        //Otherwise forward the message to the specified peer.
-                        else
+                        {
                             serverManager.SendMessage(recipient, netMessage);
+                            //See: OnNetMessage > Client > MESSAGE > else
+
+                            ClearPendingMessage(inPayload.GetMessageID());
+                            return;
+                        }
+
+                        //Else if the recipient is us, invoke the OnMessageReceived event.
+                        //Otherwise forward the message to the specified peer.
+                        if (recipient.equals(ServerManager.SERVER_UUID))
+                        {
+                            onMessageReceived.Invoke(inPayload);
+                        }
+                        else
+                        {
+                            serverManager.SendMessage(recipient, netMessage);
+                            //See: OnNetMessage > Client > MESSAGE > else
+                        }
+
+                        //Also send the message back to the sender to indicate that the message has been acknowledged.
+                        serverManager.SendMessage(data.item1, data.item2);
+                        //See: OnNetMessage > Client > MESSAGE > if
                     }
                     //Otherwise ignore the request.
                     break;
@@ -767,6 +789,7 @@ public class ChatManager implements IDisposable
         else
         {
             client.SendMessage(netMessage);
+            ///See: OnNetMessage > Host > MESSAGE
         }
 
         //If we are not sending the message synchronously, return true here.

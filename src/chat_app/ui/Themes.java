@@ -15,4 +15,6 @@ public class Themes
     public static final String DARK_BACKGROUND_TERTIARY = "#3F3F3F";
     public static final String DARK_FOREGROUND_PRIMARY = "#FFFFFF";
     public static final String DARK_FOREGROUND_SECONDARY = "#BDBDBD";
+
+    public static final String ACCENT_PRIMARY = "#00A4EF";
 }

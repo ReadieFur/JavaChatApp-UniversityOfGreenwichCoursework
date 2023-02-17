@@ -1,8 +1,11 @@
 package chat_app.ui;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -49,6 +52,13 @@ public class ChatUI extends XMLUI<Window>
 
     private final ChatManager chatManager;
     private final ConcurrentHashMap<UUID, ClientEntry> clientEntries = new ConcurrentHashMap<>();
+    /*A slight flaw can occur here, if the server restarts, everyone will have a new UUID.
+     *This is a problem because if I want to store chats by user ID, the chats won't be accessible after server resets.
+     *And if I were to store the chats by username, after a server reset, the clients can "spoof" their name and impersonate the original sender.
+     *So for these reasons, I will clear private messages between server resets, however the global message room will remain.*/
+    //TODO: A future fix for this would be to have some sort of public/private key messaging to help with verification.
+    private final ConcurrentHashMap<UUID, List<TextBlock>> messageGroups = new ConcurrentHashMap<>();
+    private UUID activeChat = ServerManager.INVALID_UUID;
 
     public ChatUI(ChatManager chatManager)
         throws IllegalArgumentException, IllegalAccessException, IOException, ParserConfigurationException, SAXException, InvalidXMLException
@@ -56,6 +66,19 @@ public class ChatUI extends XMLUI<Window>
         super();
 
         this.chatManager = chatManager;
+
+        //TODO: Add status information to the title bar.
+
+        //Create the broadcast chat entry.
+        messageGroups.put(ServerManager.INVALID_UUID, new ArrayList<>());
+        ClientEntry broadcastClientEntry = new ClientEntry("Global", "", backgroundColourTertiary, foregroundColourPrimary);
+        broadcastClientEntry.onMouseClicked.Add(e -> SetActiveChat(ServerManager.INVALID_UUID));
+        clientEntries.put(ServerManager.INVALID_UUID, broadcastClientEntry);
+        clientList.AddChild(broadcastClientEntry, broadcastClientEntry.containerConstraints);
+        broadcastClientEntry.setBackground(Color.decode(Themes.ACCENT_PRIMARY));
+        //No need to call the SetActiveChat as the active chat is already set to the broadcast chat and there will be no messages to add at this point.
+        broadcastClientEntry.setEnabled(false);
+        connectedToServer.AddListener(newValue -> broadcastClientEntry.setEnabled(Boolean.parseBoolean(newValue)));
 
         this.chatManager.onPeerConnected.Add(this::ChatManager_OnPeerConnected);
         this.chatManager.onPeerDisconnected.Add(this::ChatManager_OnPeerDisconnected);
@@ -109,17 +132,6 @@ public class ChatUI extends XMLUI<Window>
             connectedToServer.Set("true");
         }
 
-        //If we are the server, show host-only properties, otherwise hide them.
-        //Currently not required as the host-only properties get redrawn upon restart/reconnect.
-        // if (chatManager.IsHost())
-        // {
-        //     //TODO: Show server-only properties.
-        // }
-        // else
-        // {
-        //     //TODO: Hide server-only properties.
-        // }
-
         CreateClientEntry(peer);
     }
 
@@ -134,18 +146,57 @@ public class ChatUI extends XMLUI<Window>
 
             connectedToServer.Set("false");
 
+            //Revert back to the broadcast chat.
+            SetActiveChat(ServerManager.INVALID_UUID);
+
             for (UUID id : chatManager.GetPeers().keySet())
                 RemoveClientEntry(id);
+
+            //Clear the private chats, read the comment on the deceleration of messageGroups for more information.
+            for (UUID id : messageGroups.keySet())
+            {
+                //If the ID is the broadcast ID (INVALID_UUID), don't remove it.
+                if (id.equals(ServerManager.INVALID_UUID))
+                    continue;
+
+                for (TextBlock textBlock : messageGroups.get(id))
+                {
+                    //Unbind events.
+                    backgroundColourTertiary.RemoveListener(newValue -> textBlock.setBackground(Color.decode(newValue)));
+                    foregroundColourPrimary.RemoveListener(newValue -> textBlock.setForeground(Color.decode(newValue)));
+                }
+
+                messageGroups.remove(id);
+            }
         }
         else
         {
+            CreateSystemMessage(peer.GetUsername() + " disconnected.");
             RemoveClientEntry(peerID);
         }
     }
 
     private void ChatManager_OnMessageReceived(MessagePayload message)
     {
-        CreateChatMessage(chatManager.GetPeers().get(message.GetSender()).GetUsername(), message.GetMessage());
+        UUID senderID = message.GetSender();
+
+        TextBlock chatEntry = CreateChatMessage(chatManager.GetPeers().get(senderID).GetUsername(), message.GetMessage());
+
+        //If the recipient is "invalid" (the broadcast ID), then set the group ID to the broadcast ID, otherwise set it to the sender ID.
+        UUID groupID = message.GetRecipient().equals(ServerManager.INVALID_UUID) ? ServerManager.INVALID_UUID : senderID;
+        if (!messageGroups.containsKey(groupID))
+            messageGroups.put(groupID, new ArrayList<>());
+        messageGroups.get(groupID).add(chatEntry);
+
+        if (activeChat.equals(groupID))
+        {
+            AddChatEntry(chatEntry);
+            RefreshChatBox();
+        }
+        else
+        {
+            //TODO: Notify that the chat has unreads.
+        }
     }
     //#endregion
 
@@ -163,8 +214,14 @@ public class ChatUI extends XMLUI<Window>
         TextBlock chatEntry = CreateChatMessage(chatManager.GetPeers().get(chatManager.GetID()).GetUsername(), message);
         chatEntry.setForeground(Color.decode(foregroundColourSecondary.Get()));
 
-        //TODO: Message contexts (i.e. private messages).
-        Boolean success = chatManager.SendMessageSync(ServerManager.INVALID_UUID, message);
+        if (!messageGroups.containsKey(activeChat))
+            messageGroups.put(activeChat, new ArrayList<>());
+        messageGroups.get(activeChat).add(chatEntry);
+
+        AddChatEntry(chatEntry);
+        RefreshChatBox();
+
+        Boolean success = chatManager.SendMessageSync(activeChat, message);
 
         if (success)
         {
@@ -200,12 +257,14 @@ public class ChatUI extends XMLUI<Window>
                 backgroundColourTertiary,
                 foregroundColourPrimary);
             entry.ShowHostControls(chatManager.IsHost());
+            entry.onMouseClicked.Add(e -> SetActiveChat(peerID));
+
+            clientEntries.put(peerID, entry);
             clientList.AddChild(entry, entry.containerConstraints);
 
             //Refresh the scroller.
             clientListContainer.revalidate();
 
-            clientEntries.put(peerID, entry);
             return entry;
         }
     }
@@ -219,8 +278,13 @@ public class ChatUI extends XMLUI<Window>
 
             ClientEntry clientEntry = clientEntries.get(id);
             clientEntries.remove(id);
+
             clientList.RemoveChild(clientEntry);
             clientEntry.Dispose();
+
+            if (activeChat.equals(id))
+                SetActiveChat(ServerManager.INVALID_UUID);
+
             clientListContainer.revalidate();
         }
     }
@@ -233,6 +297,11 @@ public class ChatUI extends XMLUI<Window>
 
         textBlock.setForeground(Color.decode(foregroundColourSecondary.Get()));
         foregroundColourSecondary.AddListener(newValue -> textBlock.setForeground(Color.decode(newValue)));
+
+        //For now only log these messages into the global chat.
+        messageGroups.get(ServerManager.INVALID_UUID).add(textBlock);
+        if (activeChat.equals(ServerManager.INVALID_UUID))
+            AddChatEntry(textBlock);
 
         return textBlock;
     }
@@ -253,16 +322,51 @@ public class ChatUI extends XMLUI<Window>
         textBlock.setForeground(Color.decode(foregroundColourPrimary.Get()));
         foregroundColourPrimary.AddListener(newValue -> textBlock.setForeground(Color.decode(newValue)));
 
+        return textBlock;
+    }
+
+    private void AddChatEntry(TextBlock entry)
+    {
         GridBagConstraints constraints = new GridBagConstraints();
         constraints.insets = new InsetsUIResource(0, 0, 2, 0);
+        chatBox.AddChild(entry, constraints);
+    }
 
-        chatBox.AddChild(textBlock, constraints);
-
+    private void RefreshChatBox()
+    {
         //It is also important to refresh the scroll pane so that if needed, the scroll bar will be updated. Then also scroll to the bottom.
         chatBoxContainer.revalidate();
         chatBoxContainer.getVerticalScrollBar().setValue(chatBoxContainer.getVerticalScrollBar().getMaximum());
+    }
 
-        return textBlock;
+    private void SetActiveChat(UUID id)
+    {
+        //If the chat is already active or the desired new chat is us, don't do anything.
+        if (activeChat.equals(id) || id.equals(chatManager.GetID()))
+            return;
+
+        //Update the old chat entry's background colour.
+        if (clientEntries.containsKey(activeChat))
+            clientEntries.get(activeChat).setBackground(Color.decode(backgroundColourTertiary.Get()));
+
+        activeChat = id;
+        chatBox.removeAll();
+
+        //Update the new chat entry's background colour.
+        if (clientEntries.containsKey(activeChat))
+            clientEntries.get(activeChat).setBackground(Color.decode(Themes.ACCENT_PRIMARY));
+
+        //Add the messages for the selected client.
+        if (messageGroups.containsKey(id))
+        {
+            for (TextBlock entry : messageGroups.get(id))
+                AddChatEntry(entry);
+        }
+
+        //We need to redraw it in this case as we have removed items.
+        chatBox.repaint();
+        //Refresh the chat box container, we don't do this during the removal of the entries as it would just be wasting CPU cycles.
+        RefreshChatBox();
     }
     //#endregion
 }
