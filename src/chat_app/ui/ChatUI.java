@@ -17,6 +17,7 @@ import readiefur.xml_ui.XMLUI;
 import readiefur.xml_ui.attributes.BindingAttribute;
 import readiefur.xml_ui.attributes.EventCallbackAttribute;
 import readiefur.xml_ui.attributes.NamedComponentAttribute;
+import readiefur.xml_ui.controls.Button;
 import readiefur.xml_ui.controls.Grid;
 import readiefur.xml_ui.controls.Label;
 import readiefur.xml_ui.controls.Scrollable;
@@ -37,12 +38,14 @@ public class ChatUI extends XMLUI<Window>
     @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_SECONDARY) private Observable<String> backgroundColourSecondary;
     @BindingAttribute(DefaultValue = Themes.LIGHT_BACKGROUND_TERTIARY) private Observable<String> backgroundColourTertiary;
     @BindingAttribute(DefaultValue = Themes.LIGHT_FOREGROUND) private Observable<String> foregroundColour;
+    @BindingAttribute(DefaultValue = "false") private Observable<String> connectedToServer;
 
     @NamedComponentAttribute private Scrollable clientListContainer;
     @NamedComponentAttribute private StackPanel clientList;
     @NamedComponentAttribute private Scrollable chatBoxContainer;
     @NamedComponentAttribute private StackPanel chatBox;
     @NamedComponentAttribute private TextBox inputBox;
+    @NamedComponentAttribute private Button sendButton;
     //#endregion
 
     private final ChatManager chatManager;
@@ -78,7 +81,7 @@ public class ChatUI extends XMLUI<Window>
 
         //Add existing clients to the client list (some will be missed between the time of the ChatManager starting and the UI being created).
         for (Peer peer : chatManager.GetPeers().values())
-            CreateClientEntry(peer);
+            ChatManager_OnPeerConnected(peer);
     }
 
     //#region Window methods
@@ -99,6 +102,8 @@ public class ChatUI extends XMLUI<Window>
         if (peer.GetUUID().equals(ServerManager.SERVER_UUID))
         {
             //TODO: Handle server connect.
+            //Changing this property will trigger the bindings on connectedToServer, which in my case will enable/disable UI elements.
+            connectedToServer.Set("true");
         }
 
         //If we are the server, show server-only properties, otherwise hide them.
@@ -116,22 +121,19 @@ public class ChatUI extends XMLUI<Window>
 
     private void ChatManager_OnPeerDisconnected(Peer peer)
     {
-        if (peer.GetUUID().equals(ServerManager.SERVER_UUID))
+        UUID peerID = peer.GetUUID();
+
+        if (peerID.equals(ServerManager.SERVER_UUID))
         {
             //TODO: Handle server disconnect.
+            for (UUID id : chatManager.GetPeers().keySet())
+                RemoveClientEntry(id);
+
+            connectedToServer.Set("false");
         }
-
-        synchronized (clientEntries)
+        else
         {
-            UUID peerID = peer.GetUUID();
-
-            if (!clientEntries.containsKey(peerID))
-                return;
-
-            Grid clientEntry = clientEntries.get(peerID);
-            clientEntries.remove(peerID);
-            clientList.RemoveChild(clientEntry);
-            clientListContainer.revalidate();
+            RemoveClientEntry(peerID);
         }
     }
 
@@ -221,6 +223,20 @@ public class ChatUI extends XMLUI<Window>
 
             clientEntries.put(peerID, container);
             return container;
+        }
+    }
+
+    private void RemoveClientEntry(UUID id)
+    {
+        synchronized (clientEntries)
+        {
+            if (!clientEntries.containsKey(id))
+            return;
+
+            Grid clientEntry = clientEntries.get(id);
+            clientEntries.remove(id);
+            clientList.RemoveChild(clientEntry);
+            clientListContainer.revalidate();
         }
     }
 

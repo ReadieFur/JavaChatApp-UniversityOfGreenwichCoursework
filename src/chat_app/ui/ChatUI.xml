@@ -55,8 +55,8 @@
                     <ColumnDefinition/>
                     <ColumnDefinition Width="4px"/>
                 </Grid.ColumnDefinitions>
-                <TextBox Name="inputBox" Grid.Column="0" Background="{Binding backgroundColourTertiary}"/>
-                <Button Name="sendButton" Grid.Column="1" Content="Send" Background="{Binding backgroundColourTertiary}" Foreground="{Binding foregroundColour}" Click="SendButton_OnClick"/>
+                <TextBox Name="inputBox" Grid.Column="0" Background="{Binding backgroundColourTertiary}" Enabled="{Binding connectedToServer}"/>
+                <Button Name="sendButton" Grid.Column="1" Content="Send" Background="{Binding backgroundColourTertiary}" Foreground="{Binding foregroundColour}" Enabled="{Binding connectedToServer}" Click="SendButton_OnClick"/>
             </Grid>
             <!-- #endregion -->
         </Grid>
