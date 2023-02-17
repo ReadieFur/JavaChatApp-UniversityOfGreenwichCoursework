@@ -346,7 +346,11 @@ public class ChatUI extends XMLUI<Window>
             return;
 
         //Update the old chat entry's background colour.
-        clientEntries.get(activeChat).setBackground(Color.decode(backgroundColourTertiary.Get()));
+        if (clientEntries.containsKey(activeChat))
+        {
+            //We need to make sure if the old chat entry is valid as this can change if the old chat peer has disconnected.
+            clientEntries.get(activeChat).setBackground(Color.decode(backgroundColourTertiary.Get()));
+        }
 
         activeChat = chatID;
         chatBox.removeAll();
