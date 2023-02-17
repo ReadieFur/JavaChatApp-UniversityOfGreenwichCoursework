@@ -3,6 +3,7 @@ package readiefur.xml_ui.controls;
 import java.awt.Component;
 import java.awt.GridBagLayout;
 import java.awt.GridBagConstraints;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JLabel;
@@ -94,7 +95,7 @@ public class StackPanel extends JPanel
         ComputeFiller();
 
         //This method should automatically refresh the panel.
-        validate();
+        revalidate();
     }
 
     private static GridBagConstraints GetConstraintsForOrientation(String orientation, int index)
@@ -129,9 +130,42 @@ public class StackPanel extends JPanel
      */
     public void RemoveChild(Component child)
     {
+        //Update the index of all children after the removed child.
+        Boolean updateY = GetOrientation().equals(ORIENTATION_TOP_TO_BOTTOM) || GetOrientation().equals(ORIENTATION_BOTTOM_TO_TOP);
+        Object fillerComponent = getClientProperty(FILLER_COMPONENT);
+        GridBagLayout layout = (GridBagLayout)getLayout();
+        Boolean foundChild = false;
+        for (Component existingChild : getComponents())
+        {
+            if (existingChild == fillerComponent)
+                continue;
+
+            if (foundChild)
+            {
+                //Get the existing constraints for the child, the constraints shouldn't be null.
+                GridBagConstraints constraints = layout.getConstraints(existingChild);
+                if (constraints == null)
+                    throw new NullPointerException("Constraints for child " + existingChild + " are null.");
+
+                //Update the constraints for the child.
+                if (updateY)
+                    constraints.gridy--;
+                else
+                    constraints.gridx--;
+
+                layout.setConstraints(existingChild, constraints);
+            }
+            else if (existingChild == child)
+            {
+                foundChild = true;
+            }
+        }
+
         remove(child);
         ComputeFiller();
-        validate();
+        //Revalidate and repaint called here to refresh the panel.
+        revalidate();
+        repaint();
     }
 
     /**
