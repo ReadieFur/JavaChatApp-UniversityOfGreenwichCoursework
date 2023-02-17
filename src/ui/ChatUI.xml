@@ -20,7 +20,7 @@
             <StackPanel Name="clientList" Background="{Binding backgroundColourSecondary}">
 
                 <!-- #region Example content -->
-                <!-- <Grid Background="{Binding backgroundColourTertiary}" VerticalAlignment="Center" Margin="4,4,2,4">
+                <!-- <Grid Background="{Binding backgroundColourTertiary}" Margin="4,4,2,4">
                     <Label Text="Client" Foreground="{Binding foregroundColour}" HorizontalAlignment="Left" Margin="{Resource clientEntryTextMargin}"/>
                     <Label Text="IP" Foreground="{Binding foregroundColour}" HorizontalAlignment="Right" Margin="{Resource clientEntryTextMargin}"/>
                 </Grid> -->

@@ -768,6 +768,7 @@ public class ChatManager implements IDisposable
         }
         catch (TimeoutException e)
         {
+            Logger.Warn("Failed to send message: " + payload.GetMessageID());
             return false;
         }
         finally
