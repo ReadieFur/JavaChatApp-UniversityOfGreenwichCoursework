@@ -1,6 +1,6 @@
 <Window
     xmlns="readiefur.xml_ui.controls"
-    Title="ChatAppMockUI"
+    Title="ChatApp"
     Width="1080" Height="720"
     Background="{Binding backgroundColourPrimary}">
     <Window.Resources>
