@@ -1,8 +1,8 @@
-package chat_app.net_data;
+package chat_app.backend.net_data;
 
 import java.io.Serializable;
 
-import chat_app.Peer;
+import chat_app.backend.Peer;
 
 /**
  * A payload containing a list of peers.

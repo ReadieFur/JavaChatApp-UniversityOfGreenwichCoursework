@@ -1,4 +1,4 @@
-package chat_app;
+package chat_app.backend;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -22,12 +22,12 @@ import readiefur.misc.Pair;
 import readiefur.sockets.Client;
 import readiefur.sockets.ServerManager;
 
-import chat_app.net_data.EPeerStatus;
-import chat_app.net_data.EType;
-import chat_app.net_data.EmptyPayload;
-import chat_app.net_data.MessagePayload;
-import chat_app.net_data.NetMessage;
-import chat_app.net_data.PeersPayload;
+import chat_app.backend.net_data.EPeerStatus;
+import chat_app.backend.net_data.EType;
+import chat_app.backend.net_data.EmptyPayload;
+import chat_app.backend.net_data.MessagePayload;
+import chat_app.backend.net_data.NetMessage;
+import chat_app.backend.net_data.PeersPayload;
 
 //TODO: Clean this class up as it is beginning to get a bit too messy, refractor the reuse of methods for two different purposes.
 public class ChatManager implements IDisposable

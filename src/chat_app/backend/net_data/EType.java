@@ -1,4 +1,4 @@
-package chat_app.net_data;
+package chat_app.backend.net_data;
 
 /**
  * The type of message for a {@link NetMessage}.

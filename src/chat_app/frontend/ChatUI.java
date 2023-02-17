@@ -1,4 +1,4 @@
-package chat_app.ui;
+package chat_app.frontend;
 
 import java.awt.Color;
 import java.awt.Component;
@@ -27,10 +27,9 @@ import readiefur.xml_ui.controls.TextBlock;
 import readiefur.xml_ui.controls.TextBox;
 import readiefur.xml_ui.controls.Window;
 import readiefur.xml_ui.exceptions.InvalidXMLException;
-
-import chat_app.ChatManager;
-import chat_app.Peer;
-import chat_app.net_data.MessagePayload;
+import chat_app.backend.ChatManager;
+import chat_app.backend.Peer;
+import chat_app.backend.net_data.MessagePayload;
 
 public class ChatUI extends XMLUI<Window>
 {

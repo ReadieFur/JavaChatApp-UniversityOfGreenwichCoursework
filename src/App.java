@@ -8,12 +8,11 @@ import org.xml.sax.SAXException;
 import readiefur.console.ELogLevel;
 import readiefur.console.Logger;
 import readiefur.xml_ui.exceptions.InvalidXMLException;
-
-import chat_app.ChatManager;
-import chat_app.ui.ChatUI;
-import chat_app.ui.ConfigurationUI;
-import chat_app.ui.EMessageBoxButtons;
-import chat_app.ui.MessageBox;
+import chat_app.backend.ChatManager;
+import chat_app.frontend.ChatUI;
+import chat_app.frontend.ConfigurationUI;
+import chat_app.frontend.EMessageBoxButtons;
+import chat_app.frontend.MessageBox;
 
 public class App
 {

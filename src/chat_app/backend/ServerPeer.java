@@ -1,8 +1,8 @@
-package chat_app;
+package chat_app.backend;
 
 import java.util.UUID;
 
-import chat_app.net_data.EPeerStatus;
+import chat_app.backend.net_data.EPeerStatus;
 
 /**
  * Allows for setting of properties that are read-only in the base class.

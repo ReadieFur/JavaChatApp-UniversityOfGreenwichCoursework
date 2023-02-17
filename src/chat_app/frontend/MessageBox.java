@@ -1,4 +1,4 @@
-package chat_app.ui;
+package chat_app.frontend;
 
 import java.awt.Font;
 import java.io.IOException;
@@ -25,8 +25,8 @@ public class MessageBox extends XMLUI<Window>
      * @param title
      * @param header
      * @param message
-     * @param buttons {@link chat_app.ui.EMessageBoxButtons}
-     * @return The button that was clicked {@link chat_app.ui.EMessageBoxButtons}
+     * @param buttons {@link chat_app.frontend.EMessageBoxButtons}
+     * @return The button that was clicked {@link chat_app.frontend.EMessageBoxButtons}
      */
     public static int Show(String title, String header, String message, int buttons)
     {

@@ -1,4 +1,4 @@
-package chat_app.ui;
+package chat_app.frontend;
 
 //Not an enum but I will use it as one (mimic the enum functionality).
 public abstract class EMessageBoxButtons
