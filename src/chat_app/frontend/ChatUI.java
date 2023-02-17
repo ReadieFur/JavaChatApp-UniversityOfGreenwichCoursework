@@ -1,7 +1,6 @@
 package chat_app.frontend;
 
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.io.IOException;
 import java.util.ArrayList;
