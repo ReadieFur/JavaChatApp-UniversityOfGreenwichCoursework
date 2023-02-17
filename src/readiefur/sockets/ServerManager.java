@@ -1,6 +1,5 @@
 package readiefur.sockets;
 
-import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.UUID;
@@ -8,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import readiefur.misc.Event;
 import readiefur.misc.IDisposable;
+import readiefur.misc.ManualResetEvent;
 import readiefur.misc.Pair;
 
 //This is taking inspiration from my CSharpTools.Pipes project as the way Java handles networking is similar: https://github.com/ReadieFur/CSharpTools/blob/main/src/CSharpTools.Pipes
@@ -18,6 +18,8 @@ public class ServerManager extends Thread implements IDisposable
 
     private final Object lock = new Object();
     private int port;
+    private ManualResetEvent startEvent = new ManualResetEvent(false);
+
     protected Boolean isDisposed = false;
     protected ServerSocket server = null;
     protected ConcurrentHashMap<UUID, ServerClientHost> servers = new ConcurrentHashMap<>();
@@ -83,8 +85,19 @@ public class ServerManager extends Thread implements IDisposable
 
         try
         {
-            server = new ServerSocket(port);
-            while (!isDisposed && !server.isClosed())
+            try { server = new ServerSocket(port); }
+            catch (Exception ex)
+            {
+                server = null;
+                onError.Invoke(new Pair<>(SERVER_UUID, ex));
+                //If the server fails to start, then cancel the startup (done in the while loop below).
+            }
+            finally
+            {
+                startEvent.Set();
+            }
+
+            while (server != null && !isDisposed && !server.isClosed())
             {
                 try
                 {
@@ -119,13 +132,20 @@ public class ServerManager extends Thread implements IDisposable
                 }
             }
         }
-        catch (IOException ex) { onError.Invoke(new Pair<>(SERVER_UUID, ex)); }
+        catch (Exception ex) { onError.Invoke(new Pair<>(SERVER_UUID, ex)); }
 
         /*In my previous tests I had this close the connection and thread as opposed to disposing of the this instance.
          *The reason I don't do this anymore is because after a quick look, I found you cannot reuse threads in java.
          *I could work around this by creating another wrapper instance but that can be done later if needs be.
          *I will be leaving the code for closure in the deconstructor though for good practice and if I need to reimplement it again later.*/
         Dispose();
+    }
+
+    public Boolean Start()
+    {
+        super.start();
+        startEvent.WaitOne();
+        return server != null;
     }
 
     public Boolean IsDisposed()

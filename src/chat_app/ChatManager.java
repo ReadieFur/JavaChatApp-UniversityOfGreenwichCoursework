@@ -33,6 +33,8 @@ import chat_app.net_data.PeersPayload;
 public class ChatManager implements IDisposable
 {
     //#region Fields
+    private static final int COMMON_TIMEOUT = 1500;
+
     private Boolean isDisposed = false;
     private final Object lock = new Object();
 
@@ -40,6 +42,7 @@ public class ChatManager implements IDisposable
     private final String fallbackServerIPAddress;
     private final int port;
     private final String desiredUsername;
+    private int failedRestarts = 0;
 
     //Server specific properties.
     private ServerManager serverManager = null;
@@ -131,15 +134,32 @@ public class ChatManager implements IDisposable
 
             Cleanup();
 
-            /*Add some random time between 0 and 1000ms, this is to help prevent two servers trying to be created at the same time.
+            /*Add some random time between x and y ms, this is to help prevent two servers trying to be created at the same time.
             *While I do catch this issue if the server and client are on the same machine, if they are not then it is possible that,
             *Two servers get made and the clients are split across servers which is not desirable.*/
             /*In the future I think I would like to have this delay be based on the connection index (or GUID).
             *Or if the server had a clean exit, tell which clients who will be the next host.*/
             //We can skip this wait of the peersList was empty.
-            if (oldPeers.isEmpty())
+            if (!oldPeers.isEmpty() && oldClientID != null)
             {
-                try { Thread.sleep((long)(Math.random() * 1000)); }
+                //In order for the calculations below to work properly, at least one of the values needs to be a float.
+                //To make things easier however, I will make them all floats.
+                final float MIN_HASH_CODE = 0f;
+                final float MAX_HASH_CODE = Integer.MAX_VALUE;
+                final float MIN_SLEEP_TIME = 0f;
+                final float MAX_SLEEP_TIME = COMMON_TIMEOUT;
+
+                float clientHashCode = oldClientID.hashCode();
+                //We cannot work with negative numbers (and seeming as the randomness is great enough) we need to invert the number.
+                if (clientHashCode < 0)
+                    clientHashCode = -clientHashCode;
+
+                //Convert the hash code to a value between MIN_HASH_CODE and MAX_HASH_CODE.
+                //https://stackoverflow.com/questions/929103/convert-a-number-range-to-another-range-maintaining-ratio
+                //NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
+                float sleepTime = (((clientHashCode - MIN_HASH_CODE) * (MAX_SLEEP_TIME - MIN_SLEEP_TIME)) / (MAX_HASH_CODE - MIN_HASH_CODE)) + MIN_SLEEP_TIME;
+
+                try { Thread.sleep((int)sleepTime); }
                 catch (InterruptedException e) {}
             }
 
@@ -188,10 +208,20 @@ public class ChatManager implements IDisposable
                     desiredUsername,
                     EPeerStatus.CONNECTED);
                 peers.put(ServerManager.SERVER_UUID, serverPeer);
-                onPeerConnected.Invoke(ServerPeer.ToPeer(serverPeer));
 
-                serverManager.start();
+                if (!serverManager.Start())
+                {
+                    failedRestarts++;
+                    Logger.Trace(GetLogPrefix() + "Failed to start server: " + failedRestarts + "/3");
+
+                    if (failedRestarts >= 3)
+                        throw new RuntimeException("Failed to start server.");
+
+                    Restart();
+                    return;
+                }
                 Logger.Trace(GetLogPrefix() + "Server started.");
+                onPeerConnected.Invoke(ServerPeer.ToPeer(serverPeer));
 
                 // pingPong = new PingPong(serverManager);
                 // pingPong.start();
@@ -208,11 +238,24 @@ public class ChatManager implements IDisposable
                 client.onClose.Add(nul -> OnNetClose(ServerManager.SERVER_UUID));
                 client.onError.Add(error -> OnNetError(new Pair<>(ServerManager.SERVER_UUID, error)));
 
-                client.start();
+                if (!client.Start())
+                {
+                    failedRestarts++;
+                    Logger.Trace(GetLogPrefix() + "Failed to start client: " + failedRestarts + "/3");
+
+                    if (failedRestarts >= 3)
+                        throw new RuntimeException("Failed to start client.");
+
+                    Restart();
+                    return;
+                }
+
                 Logger.Trace(GetLogPrefix() + "Client started.");
             }
 
             Logger.Info("[CHAT_MANAGER] Promoted to " + (isHost ? "host" : "client") + ".");
+
+            failedRestarts = 0;
         }
     }
 
@@ -227,7 +270,8 @@ public class ChatManager implements IDisposable
 
         Client dummyClient = new Client(ipAddress, port);
         dummyClient.onConnect.Add(nul -> resetEvent.Set());
-        dummyClient.start();
+        if (!dummyClient.Start())
+            return false;
 
         try { resetEvent.WaitOne(1000); }
         catch (TimeoutException e) {}
@@ -243,53 +287,56 @@ public class ChatManager implements IDisposable
     //#region Network Events
     private void OnNetConnect(UUID uuid)
     {
-        /*It is important that the OnNetConnect and OnNetClose events are synchronized as they modify the peers list in a long running method.
-         *And yes while this does hurt performance, fortunately this app is low-traffic enough that it shouldn't be a problem.*/
-        synchronized (peers)
+        if (isDisposed)
+            return;
+
+        Logger.Trace(GetLogPrefix() + "Connection opened: " + uuid);
+
+        if (isHost)
         {
-            if (isDisposed)
-                return;
-
-            Logger.Trace(GetLogPrefix() + "Connection opened: " + uuid);
-
-            if (isHost)
+            /*When a new client connects, we add them to the list of peers however we don't,
+                *indicate that the client is ready yet, we must wait for the handshake first.*/
+            if (!peers.containsKey(uuid))
             {
-                /*When a new client connects, we add them to the list of peers however we don't,
-                 *indicate that the client is ready yet, we must wait for the handshake first.*/
-                if (!peers.containsKey(uuid))
-                {
-                    peers.put(uuid, new ServerPeer(
-                        uuid,
-                        serverManager.GetClientHosts().get(uuid).GetSocket().getLocalAddress().getHostAddress(),
-                        desiredUsername,
-                        EPeerStatus.UNINITIALIZED));
-                }
-                else
-                {
-                    //If the client was already in the list then the event will be fired for the client handshaking.
-                    onPeerConnected.Invoke(peers.get(uuid));
-                }
+                peers.put(uuid, new ServerPeer(
+                    uuid,
+                    serverManager.GetClientHosts().get(uuid).GetSocket().getLocalAddress().getHostAddress(),
+                    desiredUsername,
+                    EPeerStatus.UNINITIALIZED));
             }
             else
             {
-                /*If the uuid is equal to SERVER_UUID then the event was fired due to this instance connecting to the server,
-                *in which case we should handshake.*/
-                if (uuid.equals(ServerManager.SERVER_UUID))
-                {
-                    //Send the handshake.
-                    NetMessage<Peer> message = new NetMessage<>();
-                    message.type = EType.HANDSHAKE;
-                    message.payload = new Peer(desiredUsername);
-                    client.SendMessage(message);
+                Peer peer = peers.get(uuid);
+                if (peer == null)
+                    return;
 
-                    ///See: OnNetMessage > Host > HANDSHAKE
-                }
-                else
-                {
-                    //The new peer will have been added in the OnNetMessage > Host > HANDSHAKE message.
-                    Logger.Info(GetLogPrefix() + "Peer connected: " + peers.get(uuid).GetUsername() + (uuid.equals(id) ? " (You)" : ""));
-                    onPeerConnected.Invoke(peers.get(uuid));
-                }
+                //If the client was already in the list then the event will be fired for the client handshaking.
+                onPeerConnected.Invoke(peer);
+            }
+        }
+        else
+        {
+            /*If the uuid is equal to SERVER_UUID then the event was fired due to this instance connecting to the server,
+            *in which case we should handshake.*/
+            if (uuid.equals(ServerManager.SERVER_UUID))
+            {
+                //Send the handshake.
+                NetMessage<Peer> message = new NetMessage<>();
+                message.type = EType.HANDSHAKE;
+                message.payload = new Peer(desiredUsername);
+                client.SendMessage(message);
+
+                ///See: OnNetMessage > Host > HANDSHAKE
+            }
+            else
+            {
+                Peer peer = peers.get(uuid);
+                if (peer == null)
+                    return;
+
+                //The new peer will have been added in the OnNetMessage > Host > HANDSHAKE message.
+                Logger.Info(GetLogPrefix() + "Peer connected: " + peer.GetUsername() + (uuid.equals(id) ? " (You)" : ""));
+                onPeerConnected.Invoke(peer);
             }
         }
     }
@@ -603,63 +650,62 @@ public class ChatManager implements IDisposable
 
     private void OnNetClose(UUID uuid)
     {
-        synchronized (peers)
+        if (isDisposed)
+            return;
+
+        Logger.Trace(GetLogPrefix() + "Connection closed: " + uuid);
+        Peer oldPeer = peers.get(uuid);
+        if (oldPeer == null)
+            return;
+
+        if (isHost)
         {
-            if (isDisposed)
+            //Server has closed, handled in OnNetError || Can occur for server lookups.
+            if (uuid.equals(ServerManager.SERVER_UUID) || !peers.containsKey(uuid))
                 return;
 
-            Logger.Trace(GetLogPrefix() + "Connection closed: " + uuid);
-            Peer oldPeer = peers.get(uuid);
+            //Client has disconnected.
+            peers.remove(uuid);
 
-            if (isHost)
-            {
-                //Server has closed, handled in OnNetError || Can occur for server lookups.
-                if (uuid.equals(ServerManager.SERVER_UUID) || !peers.containsKey(uuid))
-                    return;
+            //If the client wasn't a connected peer then don't broadcast the disconnect (this can occur for handshake requests).
+            if (oldPeer.GetStatus() != EPeerStatus.CONNECTED)
+                return;
 
-                //Client has disconnected.
-                peers.remove(uuid);
+            //The oldPeer variable will be a ServerPeer object at this level.
+            ((ServerPeer)oldPeer).SetStatus(EPeerStatus.DISCONNECTED);
 
-                //If the client wasn't a connected peer then don't broadcast the disconnect (this can occur for handshake requests).
-                if (oldPeer.GetStatus() != EPeerStatus.CONNECTED)
-                    return;
+            Logger.Debug(GetLogPrefix() + "Client disconnected: " + uuid + " (" + oldPeer.GetUsername() + ")");
+            Logger.Info(GetLogPrefix() + "Client disconnected: " + oldPeer.GetUsername());
 
-                //The oldPeer variable will be a ServerPeer object at this level.
-                ((ServerPeer)oldPeer).SetStatus(EPeerStatus.DISCONNECTED);
-
-                Logger.Debug(GetLogPrefix() + "Client disconnected: " + uuid + " (" + oldPeer.GetUsername() + ")");
-                Logger.Info(GetLogPrefix() + "Client disconnected: " + oldPeer.GetUsername());
-
-                //Broadcast the disconnected peer to all other clients.
-                NetMessage<Peer> peerBroadcast = new NetMessage<>();
-                peerBroadcast.type = EType.PEER;
-                peerBroadcast.payload = ServerPeer.ToPeer(((ServerPeer)oldPeer));
-                serverManager.BroadcastMessage(peerBroadcast);
-            }
-            else
-            {
-                //If the server has disconnected, restart the client.
-                if (uuid.equals(ServerManager.SERVER_UUID))
-                {
-                    Logger.Info(GetLogPrefix() + "Disconnected from server.");
-                    //In this case we need to invoke the disconnect event before restarting.
-                    onPeerDisconnected.Invoke(oldPeer);
-                    Restart();
-                    return;
-                }
-
-                //Otherwise a client has disconnected, in which case we check if they were in our peers list, if they were then we remove them.
-                if (!peers.containsKey(uuid))
-                    return;
-                peers.remove(uuid);
-
-                Logger.Trace(GetLogPrefix() + "Peer disconnected: " + uuid + " (" + oldPeer.GetUsername() + ")");
-                Logger.Info(GetLogPrefix() + "Peer disconnected: " + oldPeer.GetUsername());
-            }
-
-            //If the above code hasn't returned, then we can invoke the disconnect event.
-            onPeerDisconnected.Invoke(oldPeer);
+            //Broadcast the disconnected peer to all other clients.
+            NetMessage<Peer> peerBroadcast = new NetMessage<>();
+            peerBroadcast.type = EType.PEER;
+            peerBroadcast.payload = ServerPeer.ToPeer(((ServerPeer)oldPeer));
+            serverManager.BroadcastMessage(peerBroadcast);
         }
+        else
+        {
+            //If the server has disconnected, restart the client.
+            if (uuid.equals(ServerManager.SERVER_UUID))
+            {
+                Logger.Info(GetLogPrefix() + "Disconnected from server.");
+                //In this case we need to invoke the disconnect event before restarting.
+                onPeerDisconnected.Invoke(oldPeer);
+                Restart();
+                return;
+            }
+
+            //Otherwise a client has disconnected, in which case we check if they were in our peers list, if they were then we remove them.
+            if (!peers.containsKey(uuid))
+                return;
+            peers.remove(uuid);
+
+            Logger.Trace(GetLogPrefix() + "Peer disconnected: " + uuid + " (" + oldPeer.GetUsername() + ")");
+            Logger.Info(GetLogPrefix() + "Peer disconnected: " + oldPeer.GetUsername());
+        }
+
+        //If the above code hasn't returned, then we can invoke the disconnect event.
+        onPeerDisconnected.Invoke(oldPeer);
     }
 
     private void OnNetError(Pair<UUID, Exception> error)
@@ -669,8 +715,8 @@ public class ChatManager implements IDisposable
             if (error.item2 instanceof BindException)
             {
                 /*A bind error can occur when another server is already running on the same port
-                 *if this happens, assume another server instance is running.*/
-                Restart();
+                 *if this happens, assume another server instance is running.
+                 *The restart will be called by the false returned Start method, so we don't call a restart here.*/
                 return;
             }
         }
@@ -799,7 +845,7 @@ public class ChatManager implements IDisposable
         //Otherwise wait for the server to acknowledge the message (within the time limit, currently hardcoded).
         try
         {
-            messageSentEvent.WaitOne(5000);
+            messageSentEvent.WaitOne(COMMON_TIMEOUT);
             return true;
         }
         catch (TimeoutException e)
