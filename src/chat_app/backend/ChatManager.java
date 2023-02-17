@@ -223,9 +223,9 @@ public class ChatManager implements IDisposable
                 Logger.Trace(GetLogPrefix() + "Server started.");
                 onPeerConnected.Invoke(ServerPeer.ToPeer(serverPeer));
 
-                // pingPong = new PingPong(serverManager);
-                // pingPong.start();
-                // Logger.Trace(GetLogPrefix() + "PingPong started.");
+                pingPong = new PingPong(serverManager);
+                pingPong.start();
+                Logger.Trace(GetLogPrefix() + "PingPong started.");
             }
             else
             {
@@ -533,6 +533,7 @@ public class ChatManager implements IDisposable
                 case PING:
                 {
                     //Occurs when the server has sent a ping request.
+                    //TODO: Add a timer to check if the server has timed out.
                     //Return a pong.
                     NetMessage<EmptyPayload> response = new NetMessage<>();
                     response.type = EType.PONG;
