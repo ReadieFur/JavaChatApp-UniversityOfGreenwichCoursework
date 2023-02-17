@@ -1,7 +1,11 @@
+import readiefur.console.ELogLevel;
+import readiefur.console.Logger;
+
 public class Testing
 {
     public static void main(String[] args)
     {
-        System.out.println("Hello World!");
+        Logger.ConfigureConsole();
+        Logger.logLevel = ELogLevel.TRACE;
     }
 }
