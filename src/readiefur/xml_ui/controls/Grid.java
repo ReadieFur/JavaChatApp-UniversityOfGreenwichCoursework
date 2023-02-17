@@ -1,6 +1,8 @@
 package readiefur.xml_ui.controls;
 
 import java.awt.GridBagLayout;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.GridBagConstraints;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +12,7 @@ import javax.swing.plaf.InsetsUIResource;
 
 import org.w3c.dom.Node;
 
+import readiefur.misc.Event;
 import readiefur.misc.Pair;
 import readiefur.xml_ui.Helpers;
 import readiefur.xml_ui.attributes.ChildBuilderAttribute;
@@ -18,12 +21,36 @@ import readiefur.xml_ui.factory.UIBuilderFactory;
 
 public class Grid extends JPanel
 {
+    public final Event<MouseEvent> onMouseClicked = new Event<>();
+    public final Event<MouseEvent> onMousePressed = new Event<>();
+    public final Event<MouseEvent> onMouseReleased = new Event<>();
+    public final Event<MouseEvent> onMouseEntered = new Event<>();
+    public final Event<MouseEvent> onMouseExited = new Event<>();
+
     public Grid()
     {
         super();
 
         setLayout(new GridBagLayout());
         setOpaque(false);
+
+        addMouseListener(new MouseListener()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e) { OnMouseClicked(e); }
+
+            @Override
+            public void mousePressed(MouseEvent e) { OnMousePressed(e); }
+
+            @Override
+            public void mouseReleased(MouseEvent e) { OnMouseReleased(e); }
+
+            @Override
+            public void mouseEntered(MouseEvent e) { OnMouseEntered(e); }
+
+            @Override
+            public void mouseExited(MouseEvent e) { OnMouseExited(e); }
+        });
     }
 
     //TODO: XML binding for grid layout. (Currently resources work, binding does not).
@@ -177,6 +204,16 @@ public class Grid extends JPanel
         }
         //#endregion
     }
+
+    protected void OnMouseClicked(MouseEvent e) { onMouseClicked.Invoke(e); }
+
+    protected void OnMousePressed(MouseEvent e) { onMousePressed.Invoke(e); }
+
+    protected void OnMouseReleased(MouseEvent e) { onMouseReleased.Invoke(e); }
+
+    protected void OnMouseEntered(MouseEvent e) { onMouseEntered.Invoke(e); }
+
+    protected void OnMouseExited(MouseEvent e) { onMouseExited.Invoke(e); }
 
     /**
      * Gets the weight value of a node.
