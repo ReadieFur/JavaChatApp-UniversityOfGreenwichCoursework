@@ -11,6 +11,13 @@
             "mainClass": "App",
             "projectName": "University_Of_Greenwich-COMP1549-Advanced_Programming-Coursework_1910754f",
             "args": "127.0.0.1 8080 Anonymous"
+        },
+        {
+            "type": "java",
+            "name": "Java: Run Tests",
+            "request": "launch",
+            "mainClass": "Testing",
+            "projectName": "University_Of_Greenwich-COMP1549-Advanced_Programming-Coursework_1910754f"
         }
     ]
 }
