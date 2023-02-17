@@ -50,7 +50,7 @@ public class ChatUI extends XMLUI<Window>
     //#endregion
 
     private final ChatManager chatManager;
-    private final ConcurrentHashMap<UUID, Grid> clientEntries = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, ClientEntry> clientEntries = new ConcurrentHashMap<>();
 
     public ChatUI(ChatManager chatManager)
         throws IllegalArgumentException, IllegalAccessException, IOException, ParserConfigurationException, SAXException, InvalidXMLException
@@ -111,15 +111,16 @@ public class ChatUI extends XMLUI<Window>
             connectedToServer.Set("true");
         }
 
-        //If we are the server, show server-only properties, otherwise hide them.
-        if (chatManager.IsHost())
-        {
-            //TODO: Show server-only properties.
-        }
-        else
-        {
-            //TODO: Hide server-only properties.
-        }
+        //If we are the server, show host-only properties, otherwise hide them.
+        //Currently not required as the host-only properties get redrawn upon restart/reconnect.
+        // if (chatManager.IsHost())
+        // {
+        //     //TODO: Show server-only properties.
+        // }
+        // else
+        // {
+        //     //TODO: Hide server-only properties.
+        // }
 
         CreateClientEntry(peer);
     }
@@ -131,6 +132,7 @@ public class ChatUI extends XMLUI<Window>
         if (peerID.equals(ServerManager.SERVER_UUID))
         {
             CreateSystemMessage("Disconnected from server.");
+            CreateSystemMessage("Reconnecting...");
 
             connectedToServer.Set("false");
 
@@ -180,7 +182,7 @@ public class ChatUI extends XMLUI<Window>
     //#endregion
 
     //#region Builders
-    private Grid CreateClientEntry(Peer peer)
+    private ClientEntry CreateClientEntry(Peer peer)
     {
         synchronized (clientEntries)
         {
@@ -194,45 +196,19 @@ public class ChatUI extends XMLUI<Window>
 
             CreateSystemMessage(username + " connected.");
 
-            //TODO: Get XML pages working and expose more generic setter methods on the Control classes.
-            Grid container = new Grid();
-            container.setOpaque(true);
-            container.setBackground(Color.decode(backgroundColourTertiary.Get()));
-            backgroundColourTertiary.AddListener(newValue -> container.setBackground(Color.decode(newValue)));
-
-            GridBagConstraints containerConstraints = new GridBagConstraints();
-            containerConstraints.insets = new InsetsUIResource(4, 4, 2, 4);
-
-            GridBagConstraints labelConstraints = new GridBagConstraints();
-            labelConstraints.weightx = 1;
-            labelConstraints.weighty = 1;
-            labelConstraints.fill = GridBagConstraints.VERTICAL;
-            labelConstraints.insets = new InsetsUIResource(4, 4, 4, 4);
-
-            Label usernameLabel = new Label();
-            usernameLabel.setText(username);
-            usernameLabel.setForeground(Color.decode(foregroundColourPrimary.Get()));
-            foregroundColourPrimary.AddListener(newValue -> usernameLabel.setForeground(Color.decode(newValue)));
-            labelConstraints.anchor = GridBagConstraints.WEST;
-            container.add(usernameLabel, labelConstraints);
-
-            Label statusLabel = new Label();
-            statusLabel.setText(peer.GetIPAddress());
-            statusLabel.setForeground(Color.decode(foregroundColourPrimary.Get()));
-            foregroundColourPrimary.AddListener(newValue -> statusLabel.setForeground(Color.decode(newValue)));
-            labelConstraints.anchor = GridBagConstraints.EAST;
-            container.add(statusLabel, labelConstraints);
-
-            //Hide the status label by default.
-            statusLabel.setVisible(false);
-
-            clientList.AddChild(container, containerConstraints);
+            ClientEntry entry = new ClientEntry(
+                username,
+                peer.GetIPAddress(),
+                backgroundColourTertiary,
+                foregroundColourPrimary);
+            entry.ShowHostControls(chatManager.IsHost());
+            clientList.AddChild(entry, entry.containerConstraints);
 
             //Refresh the scroller.
             clientListContainer.revalidate();
 
-            clientEntries.put(peerID, container);
-            return container;
+            clientEntries.put(peerID, entry);
+            return entry;
         }
     }
 
@@ -241,11 +217,12 @@ public class ChatUI extends XMLUI<Window>
         synchronized (clientEntries)
         {
             if (!clientEntries.containsKey(id))
-            return;
+                return;
 
-            Grid clientEntry = clientEntries.get(id);
+            ClientEntry clientEntry = clientEntries.get(id);
             clientEntries.remove(id);
             clientList.RemoveChild(clientEntry);
+            clientEntry.Dispose();
             clientListContainer.revalidate();
         }
     }
