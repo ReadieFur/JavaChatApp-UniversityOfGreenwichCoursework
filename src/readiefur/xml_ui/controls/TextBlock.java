@@ -19,12 +19,6 @@ public class TextBlock extends JTextArea
         setText(value);
     }
 
-    @SetterAttribute("Enabled")
-    public void SetEnabled(String value)
-    {
-        setEnabled(Boolean.parseBoolean(value));
-    }
-
     @SetterAttribute("Wrap")
     public void SetWrap(String value)
     {

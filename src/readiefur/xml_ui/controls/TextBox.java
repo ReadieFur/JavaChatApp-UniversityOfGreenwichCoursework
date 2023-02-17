@@ -37,12 +37,6 @@ public class TextBox extends JTextField
         setText(value);
     }
 
-    @SetterAttribute("Enabled")
-    public void SetEnabled(String value)
-    {
-        setEnabled(Boolean.parseBoolean(value));
-    }
-
     protected void OnKeyTyped(KeyEvent e) { onKeyTyped.Invoke(e); }
 
     protected void OnKeyPressed(KeyEvent e) { onKeyPressed.Invoke(e); }

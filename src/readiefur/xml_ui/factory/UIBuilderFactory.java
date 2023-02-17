@@ -175,6 +175,11 @@ public class UIBuilderFactory
                 //#endregion
                 //#region Else try to set the property as a generic value (i.e. properties that are not specific to any one component).
                 //The components can override these properties if they want to in which case this code won't be reached.
+                else if (attributeName.equals("Enabled"))
+                {
+                    SetOrBindProperty(attributeValue,
+                        newValue -> component.setEnabled(Boolean.parseBoolean(newValue)));
+                }
                 else if (attributeName.equals("Visible"))
                 {
                     SetOrBindProperty(attributeValue,

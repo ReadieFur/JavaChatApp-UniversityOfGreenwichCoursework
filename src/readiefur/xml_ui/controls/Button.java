@@ -26,12 +26,6 @@ public class Button extends JButton
         setText(text);
     }
 
-    @SetterAttribute("Enabled")
-    public void SetEnabled(String enabled)
-    {
-        setEnabled(Boolean.parseBoolean(enabled));
-    }
-
     @SetterAttribute("ToolTip")
     public void SetToolTip(String toolTip)
     {
