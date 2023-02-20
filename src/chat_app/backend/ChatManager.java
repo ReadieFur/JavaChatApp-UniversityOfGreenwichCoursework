@@ -254,9 +254,9 @@ public class ChatManager implements IDisposable
                 onPeerConnected.Invoke(ServerPeer.ToPeer(serverPeer));
 
                 //TODO: Ensure this gets enabled when finished with debugging.
-                // pingPong = new PingPong(serverManager);
-                // pingPong.start();
-                // Logger.Trace(GetLogPrefix() + "PingPong started.");
+                pingPong = new PingPong(serverManager);
+                pingPong.start();
+                Logger.Trace(GetLogPrefix() + "PingPong started.");
             }
             else
             {
