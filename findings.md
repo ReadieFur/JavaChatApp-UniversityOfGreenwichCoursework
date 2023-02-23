@@ -2,3 +2,4 @@
 - Java does not support implicit casting or any custom operators for that matter, this is probably in part why you cannot force a cast to a type even if you know it should be possible.
 - Java's reflection and casting is not nearly as powerful as C#'s. The same goes for generics/templates.
 - Java doesn't even have default parameters, at least it has method overloading.
+- I wanted to use the Windows UI Automation Framework to run automated UI tests, however after a quick look using the Windows SDK Inspect tool, it seems like Java swing does not comply with the Windows UI framework, and so the UI cannon't easily be automated. This is most likley because the java swing UI framework uses its own rendering library, therefore I must use a different method to automate the UI. I don't want to directly interface with the code however as that will not represent a "real world" scenario.
