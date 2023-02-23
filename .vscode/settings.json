@@ -9,5 +9,12 @@
         "unreads",
         "XMLUI"
     ],
-    "java.debug.settings.onBuildFailureProceed": true
+    "java.debug.settings.onBuildFailureProceed": true,
+    // "java.configuration.runtimes": [
+    //     {
+    //         "name": "OpenJDK 11",
+    //         "path": "H:\\Programs\\jdk-11.0.2",
+    //         "default": true
+    //     }
+    // ],
 }
