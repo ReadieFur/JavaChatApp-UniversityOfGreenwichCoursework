@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement />
+  <nodes>
+    <node x="1718.5" y="154.5">readiefur.misc.IDisposable</node>
+    <node x="2342.75" y="0.0">readiefur.xml_ui.controls.Grid</node>
+    <node x="1807.25" y="575.0">readiefur.sockets.ServerManager</node>
+    <node x="1036.0" y="1348.0">readiefur.sockets.Client</node>
+    <node x="0.0" y="1939.0">chat_app.backend.ServerPeer</node>
+    <node x="618.75" y="0.0">readiefur.xml_ui.interfaces.IRootComponent</node>
+    <node x="0.0" y="816.0">chat_app.frontend.ChatUI</node>
+    <node x="1385.25" y="432.0">chat_app.backend.ChatManager</node>
+    <node x="703.0" y="76.0">readiefur.xml_ui.controls.Window</node>
+    <node x="399.0" y="1014.0">chat_app.frontend.ConfigurationUI</node>
+    <node x="1132.25" y="674.0">readiefur.sockets.ASocket</node>
+    <node x="690.0" y="1003.0">chat_app.frontend.MessageBox</node>
+    <node x="56.0" y="1639.0">chat_app.backend.Peer</node>
+    <node x="2212.25" y="707.0">chat_app.frontend.ClientEntry</node>
+    <node x="1255.0" y="1381.0">readiefur.sockets.ServerClientHost</node>
+    <node x="386.0" y="329.0">readiefur.xml_ui.XMLUI</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="readiefur.sockets.ServerManager" target="readiefur.misc.IDisposable">
+      <point x="0.0" y="-290.0" />
+      <point x="1999.75" y="412.0" />
+      <point x="1811.625" y="412.0" />
+      <point x="18.625" y="36.5" />
+    </edge>
+    <edge source="chat_app.frontend.ClientEntry" target="readiefur.misc.IDisposable">
+      <point x="-102.0" y="-158.0" />
+      <point x="2314.25" y="402.0" />
+      <point x="1848.875" y="402.0" />
+      <point x="55.875" y="36.5" />
+    </edge>
+    <edge source="chat_app.frontend.ConfigurationUI" target="readiefur.xml_ui.XMLUI">
+      <point x="0.0" y="-191.0" />
+      <point x="0.0" y="92.0" />
+    </edge>
+    <edge source="chat_app.frontend.ChatUI" target="readiefur.xml_ui.XMLUI">
+      <point x="0.0" y="-389.0" />
+      <point x="189.5" y="791.0" />
+      <point x="435.5" y="791.0" />
+      <point x="-99.0" y="92.0" />
+    </edge>
+    <edge source="readiefur.xml_ui.controls.Window" target="readiefur.xml_ui.interfaces.IRootComponent">
+      <point x="0.0" y="-345.0" />
+      <point x="847.0" y="51.0" />
+      <point x="726.75" y="51.0" />
+      <point x="36.0" y="13.0" />
+    </edge>
+    <edge source="chat_app.backend.ChatManager" target="readiefur.misc.IDisposable">
+      <point x="0.0" y="-433.0" />
+      <point x="1586.25" y="412.0" />
+      <point x="1774.375" y="412.0" />
+      <point x="-18.625" y="36.5" />
+    </edge>
+    <edge source="readiefur.xml_ui.XMLUI" target="readiefur.xml_ui.interfaces.IRootComponent">
+      <point x="0.0" y="-92.0" />
+      <point x="534.5" y="51.0" />
+      <point x="654.75" y="51.0" />
+      <point x="-36.0" y="13.0" />
+    </edge>
+    <edge source="chat_app.frontend.MessageBox" target="readiefur.xml_ui.XMLUI">
+      <point x="0.0" y="-202.0" />
+      <point x="818.0" y="791.0" />
+      <point x="633.5" y="791.0" />
+      <point x="99.0" y="92.0" />
+    </edge>
+    <edge source="readiefur.sockets.ASocket" target="readiefur.misc.IDisposable">
+      <point x="0.0" y="-191.0" />
+      <point x="1248.75" y="402.0" />
+      <point x="1737.125" y="402.0" />
+      <point x="-55.875" y="36.5" />
+    </edge>
+    <edge source="chat_app.backend.ServerPeer" target="chat_app.backend.Peer">
+      <point x="0.0" y="-58.5" />
+      <point x="0.0" y="125.0" />
+    </edge>
+    <edge source="readiefur.sockets.ServerClientHost" target="readiefur.sockets.ASocket">
+      <point x="0.0" y="-48.0" />
+      <point x="1362.0" y="1323.0" />
+      <point x="1307.0" y="1323.0" />
+      <point x="58.25" y="191.0" />
+    </edge>
+    <edge source="chat_app.frontend.ClientEntry" target="readiefur.xml_ui.controls.Grid">
+      <point x="102.0" y="-158.0" />
+      <point x="0.0" y="191.0" />
+    </edge>
+    <edge source="readiefur.sockets.Client" target="readiefur.sockets.ASocket">
+      <point x="0.0" y="-81.0" />
+      <point x="1135.5" y="1323.0" />
+      <point x="1190.5" y="1323.0" />
+      <point x="-58.25" y="191.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="0.7000000000000001" x="634.6911096405266" y="613.0189535493728" />
+  <SelectedNodes />
+  <Categories>
+    <Category>Fields</Category>
+    <Category>Constructors</Category>
+    <Category>Methods</Category>
+  </Categories>
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+

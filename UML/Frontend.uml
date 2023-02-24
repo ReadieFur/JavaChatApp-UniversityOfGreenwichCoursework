@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement />
+  <nodes>
+    <node x="996.5" y="432.0">chat_app.frontend.ClientEntry</node>
+    <node x="0.0" y="1014.0">chat_app.frontend.ConfigurationUI</node>
+    <node x="991.0" y="154.5">readiefur.misc.IDisposable</node>
+    <node x="587.5" y="76.0">readiefur.xml_ui.controls.Window</node>
+    <node x="1160.0" y="0.0">readiefur.xml_ui.controls.Grid</node>
+    <node x="270.5" y="329.0">readiefur.xml_ui.XMLUI</node>
+    <node x="291.0" y="1003.0">chat_app.frontend.MessageBox</node>
+    <node x="503.25" y="0.0">readiefur.xml_ui.interfaces.IRootComponent</node>
+    <node x="567.0" y="816.0">chat_app.frontend.ChatUI</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="chat_app.frontend.ClientEntry" target="readiefur.misc.IDisposable">
+      <point x="-102.0" y="-158.0" />
+      <point x="1098.5" y="407.0" />
+      <point x="1065.5" y="407.0" />
+      <point x="0.0" y="36.5" />
+    </edge>
+    <edge source="chat_app.frontend.ConfigurationUI" target="readiefur.xml_ui.XMLUI">
+      <point x="0.0" y="-191.0" />
+      <point x="135.5" y="791.0" />
+      <point x="320.0" y="791.0" />
+      <point x="-99.0" y="92.0" />
+    </edge>
+    <edge source="readiefur.xml_ui.controls.Window" target="readiefur.xml_ui.interfaces.IRootComponent">
+      <point x="0.0" y="-345.0" />
+      <point x="731.5" y="51.0" />
+      <point x="611.25" y="51.0" />
+      <point x="36.0" y="13.0" />
+    </edge>
+    <edge source="chat_app.frontend.ChatUI" target="readiefur.xml_ui.XMLUI">
+      <point x="0.0" y="-389.0" />
+      <point x="756.5" y="791.0" />
+      <point x="518.0" y="791.0" />
+      <point x="99.0" y="92.0" />
+    </edge>
+    <edge source="chat_app.frontend.ClientEntry" target="readiefur.xml_ui.controls.Grid">
+      <point x="102.0" y="-158.0" />
+      <point x="1302.5" y="407.0" />
+      <point x="1335.5" y="407.0" />
+      <point x="0.0" y="191.0" />
+    </edge>
+    <edge source="readiefur.xml_ui.XMLUI" target="readiefur.xml_ui.interfaces.IRootComponent">
+      <point x="0.0" y="-92.0" />
+      <point x="419.0" y="51.0" />
+      <point x="539.25" y="51.0" />
+      <point x="-36.0" y="13.0" />
+    </edge>
+    <edge source="chat_app.frontend.MessageBox" target="readiefur.xml_ui.XMLUI">
+      <point x="0.0" y="-202.0" />
+      <point x="0.0" y="92.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="0.9" x="1216.7777777777778" y="659.5555555555555" />
+  <SelectedNodes />
+  <Categories>
+    <Category>Fields</Category>
+    <Category>Constructors</Category>
+    <Category>Methods</Category>
+  </Categories>
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+

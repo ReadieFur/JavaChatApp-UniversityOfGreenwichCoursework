@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement />
+  <nodes>
+    <node x="1662.5" y="0.0">chat_app.backend.Peer</node>
+    <node x="1080.0" y="707.0">chat_app.frontend.ClientEntry</node>
+    <node x="615.75" y="154.5">readiefur.misc.IDisposable</node>
+    <node x="1210.5" y="0.0">readiefur.xml_ui.controls.Grid</node>
+    <node x="535.25" y="1348.0">readiefur.sockets.Client</node>
+    <node x="301.25" y="1381.0">readiefur.sockets.ServerClientHost</node>
+    <node x="0.0" y="575.0">readiefur.sockets.ServerManager</node>
+    <node x="1606.5" y="300.0">chat_app.backend.ServerPeer</node>
+    <node x="658.0" y="432.0">chat_app.backend.ChatManager</node>
+    <node x="405.0" y="674.0">readiefur.sockets.ASocket</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="readiefur.sockets.ServerManager" target="readiefur.misc.IDisposable">
+      <point x="0.0" y="-290.0" />
+      <point x="192.5" y="402.0" />
+      <point x="634.375" y="402.0" />
+      <point x="-55.875" y="36.5" />
+    </edge>
+    <edge source="chat_app.frontend.ClientEntry" target="readiefur.misc.IDisposable">
+      <point x="-102.0" y="-158.0" />
+      <point x="1182.0" y="402.0" />
+      <point x="746.125" y="402.0" />
+      <point x="55.875" y="36.5" />
+    </edge>
+    <edge source="readiefur.sockets.ASocket" target="readiefur.misc.IDisposable">
+      <point x="0.0" y="-191.0" />
+      <point x="521.5" y="412.0" />
+      <point x="671.625" y="412.0" />
+      <point x="-18.625" y="36.5" />
+    </edge>
+    <edge source="chat_app.backend.ServerPeer" target="chat_app.backend.Peer">
+      <point x="0.0" y="-58.5" />
+      <point x="0.0" y="125.0" />
+    </edge>
+    <edge source="chat_app.backend.ChatManager" target="readiefur.misc.IDisposable">
+      <point x="0.0" y="-433.0" />
+      <point x="859.0" y="412.0" />
+      <point x="708.875" y="412.0" />
+      <point x="18.625" y="36.5" />
+    </edge>
+    <edge source="readiefur.sockets.ServerClientHost" target="readiefur.sockets.ASocket">
+      <point x="0.0" y="-48.0" />
+      <point x="408.25" y="1323.0" />
+      <point x="463.25" y="1323.0" />
+      <point x="-58.25" y="191.0" />
+    </edge>
+    <edge source="chat_app.frontend.ClientEntry" target="readiefur.xml_ui.controls.Grid">
+      <point x="102.0" y="-158.0" />
+      <point x="0.0" y="191.0" />
+    </edge>
+    <edge source="readiefur.sockets.Client" target="readiefur.sockets.ASocket">
+      <point x="0.0" y="-81.0" />
+      <point x="634.75" y="1323.0" />
+      <point x="579.75" y="1323.0" />
+      <point x="58.25" y="191.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="1.0" x="1145.5" y="617.5" />
+  <SelectedNodes>
+    <node>chat_app.backend.ServerPeer</node>
+  </SelectedNodes>
+  <Categories>
+    <Category>Fields</Category>
+    <Category>Constructors</Category>
+    <Category>Methods</Category>
+  </Categories>
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+
