@@ -1,5 +1,7 @@
 @echo off
 
+set JAR_FILE_NAME=University_Of_Greenwich-COMP1549-Advanced_Programming-Coursework.jar
+
 @REM Ensure that the working directory is where this file is placed https://stackoverflow.com/questions/17063947/get-current-batchfile-directory
 cd %~dp0
 
@@ -24,7 +26,7 @@ goto run
 :packed_method
 @REM The program will be packed into a jar file.
 @REM We can use the -jar flag to specify the path to the jar file we want to run.
-set COMMAND=java.exe -jar University_Of_Greenwich-COMP1549-Advanced_Programming-Coursework.jar
+set COMMAND=java.exe -jar %JAR_FILE_NAME%
 goto run
 ::#endregion
 
