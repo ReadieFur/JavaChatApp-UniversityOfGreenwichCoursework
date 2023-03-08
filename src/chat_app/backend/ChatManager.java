@@ -777,6 +777,9 @@ public class ChatManager implements IDisposable
     }
     //#endregion
 
+    //#region Dispatched events
+    //#endregion
+
     //#region Misc
     private Peer[] GetReadyPeers()
     {

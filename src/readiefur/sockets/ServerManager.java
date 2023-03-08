@@ -161,6 +161,7 @@ public class ServerManager extends Thread implements IDisposable
     private UUID GenerateUUID()
     {
         UUID uuid;
+        //While it is EXTREMELY unlikely that duplicate UUID will ever be made, I like to always place my ID generators in a do/while loop.
         do { uuid = UUID.randomUUID(); }
         while (servers.containsKey(uuid) || uuid.equals(SERVER_UUID) || uuid.equals(INVALID_UUID));
         return uuid;
