@@ -29,7 +29,6 @@ import chat_app.backend.net_data.MessagePayload;
 import chat_app.backend.net_data.NetMessage;
 import chat_app.backend.net_data.PeersPayload;
 
-//TODO: Clean this class up as it is beginning to get a bit too messy, refractor the reuse of methods for two different purposes.
 public class ChatManager implements IDisposable
 {
     //#region Fields
@@ -328,47 +327,20 @@ public class ChatManager implements IDisposable
         {
             /*When a new client connects, we add them to the list of peers however we don't,
              *indicate that the client is ready yet, we must wait for the handshake first.*/
-            if (!peers.containsKey(uuid))
-            {
-                peers.put(uuid, new ServerPeer(
-                    uuid,
-                    serverManager.GetClientHosts().get(uuid).GetSocket().getLocalAddress().getHostAddress(),
-                    desiredUsername,
-                    EPeerStatus.UNINITIALIZED));
-            }
-            else
-            {
-                Peer peer = peers.get(uuid);
-                if (peer == null)
-                    return;
-
-                //If the client was already in the list then the event will be fired for the client handshaking.
-                onPeerConnected.Invoke(peer);
-            }
+            peers.put(uuid, new ServerPeer(
+                uuid,
+                serverManager.GetClientHosts().get(uuid).GetSocket().getLocalAddress().getHostAddress(),
+                desiredUsername,
+                EPeerStatus.UNINITIALIZED));
         }
         else
         {
-            /*If the uuid is equal to SERVER_UUID and the ID isn't in the peers list
-             *then the event was fired due to this instance connecting to the server, in which case we should handshake.*/
-            if (uuid.equals(ServerManager.SERVER_UUID) && !peers.containsKey(uuid))
-            {
-                //Send the handshake.
-                NetMessage<Peer> message = new NetMessage<>();
-                message.type = EType.HANDSHAKE;
-                message.payload = new Peer(desiredUsername);
-                client.SendMessage(message);
-                ///See: OnNetMessage > Host > HANDSHAKE
-            }
-            else
-            {
-                Peer peer = peers.get(uuid);
-                if (peer == null)
-                    return;
-
-                //The new peer will have been added in the OnNetMessage > Host > HANDSHAKE message.
-                Logger.Info(GetLogPrefix() + "Peer connected: " + peer.GetUsername() + (uuid.equals(id) ? " (You)" : ""));
-                onPeerConnected.Invoke(peer);
-            }
+            //Send the handshake (this event will only occur when connecting to the server).
+            NetMessage<Peer> message = new NetMessage<>();
+            message.type = EType.HANDSHAKE;
+            message.payload = new Peer(desiredUsername);
+            client.SendMessage(message);
+            ///See: OnNetMessage > Host > HANDSHAKE
         }
     }
 
@@ -498,7 +470,7 @@ public class ChatManager implements IDisposable
             serverManager.BroadcastMessage(peerBroadcast);
             ///See: OnNetMessage > Client > PEER
 
-            OnNetConnect(data.item1);
+            onPeerConnected.Invoke(ServerPeer.ToPeer(peer));
         }
         else
         {
@@ -558,12 +530,11 @@ public class ChatManager implements IDisposable
 
                     //Update the peer in the list (this should be added before the OnNetConnect event is fired).
                     /*Notice how there is no synchronize block here, this is because I am using a ConcurrentHashMap which is synchronized
-                        *and I am not performing any long operations here so there is no need use a synchronize block here.*/
-                    //TODO: Move this peers.put into the OnNetConnect, due to my current design of that method, it is not possible.
+                     *and I am not performing any long operations here so there is no need use a synchronize block here.*/
                     peers.put(payloadID, data.item2.payload);
 
                     if (isNewPeer)
-                        OnNetConnect(payloadID);
+                        onPeerConnected.Invoke(data.item2.payload);
 
                     break;
                 }
@@ -626,7 +597,7 @@ public class ChatManager implements IDisposable
 
                 //We don't need to check the state of the peer as they should always be connected at this point.
                 if (!oldPeers.containsKey(peerUUID))
-                    OnNetConnect(peerUUID);
+                    onPeerConnected.Invoke(peer);
             }
 
             /*If the client was in the old list but not the new one, fire the disconnect event.
