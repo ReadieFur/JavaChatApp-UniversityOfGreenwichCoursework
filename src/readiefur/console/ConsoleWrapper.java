@@ -1,3 +1,14 @@
+//A nice little easter-egg I like to put into my projects source files (typically into web consoles, so this console class seemed fitting):
+/* !   /\                   ,'|
+   o--'O `.                /  /
+    `--.   `-----------._,' ,'
+       \                ,--'
+        ) )    _,--(    |
+       /,^.---'     )/ \\
+      ((   \\      ((   \\
+       \)   \)      \)  (/
+   -What are you doing here?*/
+
 package readiefur.console;
 
 import java.io.PrintStream;
@@ -37,6 +48,7 @@ public class ConsoleWrapper
                             stdOut.println(processedMessage.item2);
                 }
             });
+
             System.setErr(new PrintStream(System.err)
             {
                 @Override

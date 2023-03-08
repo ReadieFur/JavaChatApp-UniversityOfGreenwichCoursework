@@ -1,3 +1,6 @@
+/*This file could be considered the core of the application.
+ *Almost everything chat-app related happens here, managing the client, server, messages and reconnection.*/
+
 package chat_app.backend;
 
 import java.io.ByteArrayOutputStream;
