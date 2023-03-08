@@ -251,7 +251,15 @@ public class ChatUI extends XMLUI<Window>
             if (clientEntries.containsKey(peerID))
                 return clientEntries.get(peerID);
 
-            String username = peer.GetUsername() + (peerID.equals(chatManager.GetID()) ? " (You)" : "");
+            String username = peer.GetUsername();
+            Boolean you = peerID.equals(chatManager.GetID());
+            Boolean host = peerID.equals(ServerManager.SERVER_UUID);
+            if (you && !host)
+                username += " (You)";
+            else if (host && !you)
+                username += " (Host)";
+            else if (you && host)
+                username += " (You | Host)";
 
             CreateSystemMessage(username + " connected.");
 
@@ -260,7 +268,7 @@ public class ChatUI extends XMLUI<Window>
                 peer.GetIPAddress(),
                 backgroundColourTertiary,
                 foregroundColourPrimary);
-            entry.ShowHostControls(chatManager.IsHost());
+            entry.ShowHostControls(chatManager.IsHost()); //Change to true to always show the IP address.
             entry.onMouseClicked.Add(e -> SetActiveChat(peerID));
 
             clientEntries.put(peerID, entry);
