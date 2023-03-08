@@ -377,311 +377,343 @@ public class ChatManager implements IDisposable
         if (isDisposed || isCleaningUp)
             return;
 
-        NetMessage<?> netMessage = (NetMessage<?>)data.item2;
+        //Verify that the message body is a typeof(NetMessage<?>)
+        if (!(data.item2 instanceof NetMessage<?>))
+            return;
+        @SuppressWarnings("unchecked")
+        Pair<UUID, NetMessage<?>> castData = (Pair<UUID, NetMessage<?>>)(Object)data;
 
-        Logger.Trace(GetLogPrefix() + "Message received: " + data.item1 + " | " + netMessage.type);
+        /*If the message isn't a EType.MESSAGE and the sender isn't the server,
+         *ignore the request as clients should not be allowed to send other events to each other.*/
+        if (!isHost && castData.item2.type != EType.MESSAGE && !data.item1.equals(ServerManager.SERVER_UUID))
+            return;
 
+        Logger.Trace(GetLogPrefix() + "Message received: " + castData.item1 + " | " + castData.item2.type);
+
+        switch (castData.item2.type)
+        {
+            case HANDSHAKE:
+            {
+                //Annoying how this can't be used inline.
+                // @SuppressWarnings("unchecked")
+                HandleHandshakeData((Pair<UUID, NetMessage<Peer>>)(Object)castData);
+                break;
+            }
+            case PING:
+            {
+                // @SuppressWarnings("unchecked")
+                HandlePingData((Pair<UUID, NetMessage<EmptyPayload>>)(Object)castData);
+                break;
+            }
+            case PONG:
+            {
+                //The host handles pong messages via the PingPong class.
+                //Clients do not need to handle pong messages.
+                break;
+            }
+            case PEER:
+            {
+                // @SuppressWarnings("unchecked")
+                HandlePeerData((Pair<UUID, NetMessage<Peer>>)(Object)castData);
+                break;
+            }
+            case PEERS:
+            {
+                // @SuppressWarnings("unchecked")
+                HandlePeersData((Pair<UUID, NetMessage<PeersPayload>>)(Object)castData);
+                break;
+            }
+            case MESSAGE:
+            {
+                // @SuppressWarnings("unchecked")
+                HandleMessageData((Pair<UUID, NetMessage<MessagePayload>>)(Object)castData);
+                break;
+            }
+            default:
+                //Invalid message type, ignore the request.
+                break;
+        }
+    }
+
+    //#region Message specific methods.
+    //The net message handler has been split off into multiple methods as its body would've been massive otherwise, this is to improve readability.
+
+    private void HandleHandshakeData(Pair<UUID, NetMessage<Peer>> data)
+    {
         if (isHost)
         {
-            switch (netMessage.type)
+            //From: OnNetConnect > Client
+
+            ServerPeer peer = (ServerPeer)peers.get(data.item1);
+
+            //If the peer isn't found then ignore the request || If the peer has already handshaked (connected), ignore the request.
+            if (peer == null || peer.GetStatus() == EPeerStatus.CONNECTED)
+                return;
+
+            String nickname = data.item2.payload.username == null || data.item2.payload.username.isBlank()
+                ? "Anonymous" : data.item2.payload.username;
+            int duplicateCount = 0;
+
+            /*Check for duplicate nicknames.
+             *(This could've been done ine like 2 lines in C# but Java's inability to pass local variables makes it a bit more complicated).*/
+            while (true)
             {
-                //I like to use {} on my switch case statements for two reasons, it scopes each case and it increases readability.
-                case HANDSHAKE:
+                boolean duplicateFound = false;
+                for (Peer existingPeer : peers.values())
                 {
-                    //From: OnNetConnect > Client
-
-                    Peer inPayload = (Peer)netMessage.payload;
-
-                    ServerPeer peer = (ServerPeer)peers.get(data.item1);
-
-                    //If the peer isn't found then ignore the request || If the peer has already handshaked (connected), ignore the request.
-                    if (peer == null || peer.GetStatus() == EPeerStatus.CONNECTED)
-                        return;
-
-                    String nickname = inPayload.username == null || inPayload.username.isBlank() ? "Anonymous" : inPayload.username;
-                    int duplicateCount = 0;
-
-                    /*Check for duplicate nicknames.
-                     *(This could've been done ine like 2 lines in C# but Java's inability to pass local variables makes it a bit more complicated).*/
-                    while (true)
+                    //It seems like string == string is not the same as string.equals(string) in Java.
+                    if (existingPeer.GetStatus() == EPeerStatus.CONNECTED
+                        && existingPeer.username != null
+                        && existingPeer.username.equals(nickname))
                     {
-                        boolean duplicateFound = false;
-                        for (Peer existingPeer : peers.values())
-                        {
-                            //It seems like string == string is not the same as string.equals(string) in Java.
-                            if (existingPeer.GetStatus() == EPeerStatus.CONNECTED
-                                && existingPeer.username != null
-                                && existingPeer.username.equals(nickname))
-                            {
-                                duplicateFound = true;
-                                break;
-                            }
-                        }
-                        if (!duplicateFound)
-                            break;
-
-                        nickname = inPayload.username + ++duplicateCount;
+                        duplicateFound = true;
+                        break;
                     }
-
-                    //Indicate that the client is ready.
-                    //All peers should be typeof ServerPeer at this level.
-                    peer.username = nickname;
-                    peer.SetStatus(EPeerStatus.CONNECTED);
-
-                    Logger.Debug(GetLogPrefix() + "Client connected: " + data.item1 + " (" + peer.username + ")");
-                    Logger.Info(GetLogPrefix() + "Client connected: " + peer.username);
-
-                    //Return the server-validated handshake data back to the client.
-                    NetMessage<Peer> response = new NetMessage<>();
-                    response.type = EType.HANDSHAKE;
-                    response.payload = peer;
-                    serverManager.SendMessage(data.item1, response);
-                    ///See: OnNetMessage > Client > HANDSHAKE
-
-                    //Broadcast the new peer to all other peers.
-                    NetMessage<Peer> peerBroadcast = new NetMessage<>();
-                    peerBroadcast.type = EType.PEER;
-                    peerBroadcast.payload = peer;
-                    serverManager.BroadcastMessage(peerBroadcast);
-                    ///See: OnNetMessage > Client > PEER
-
-                    OnNetConnect(data.item1);
-
-                    break;
                 }
-                case PEERS:
-                {
-                    //(Typically) From: OnNetMessage > Client > HANDSHAKE
-
-                    //Send the list of peers to the client.
-                    NetMessage<PeersPayload> response = new NetMessage<>();
-                    response.type = EType.PEERS;
-                    response.payload = new PeersPayload();
-                    response.payload.peers = GetReadyPeers();
-                    serverManager.SendMessage(data.item1, response);
-
-                    ///See: OnNetMessage > Client > PEERS
-
+                if (!duplicateFound)
                     break;
-                }
-                case MESSAGE:
-                {
-                    //Occurs when a client sends a message to be processed by the server.
 
-                    //Ignore messages from clients who have not connected yet.
-                    if (peers.get(data.item1).GetStatus() != EPeerStatus.CONNECTED)
-                        return;
-
-                    MessagePayload inPayload = (MessagePayload)netMessage.payload;
-                    inPayload.SetSender(data.item1);
-                    UUID recipient = inPayload.GetRecipient();
-
-                    /*If the recipient is `INVALID_UUID` then broadcast the message to all peers.
-                     *Otherwise check if the message is available to be sent to the specified peer.*/
-                    if (recipient.equals(ServerManager.INVALID_UUID))
-                    {
-                        //Broadcast the message to all peers.
-                        NetMessage<MessagePayload> message = new NetMessage<>();
-                        message.type = EType.MESSAGE;
-                        message.payload = inPayload;
-                        serverManager.BroadcastMessage(message);
-                        //See: OnNetMessage > Host/Client > MESSAGE
-
-                        //If we (the server) are the sender then remove the message from the queue.
-                        //Otherwise invoke the OnMessageReceived event.
-                        if (inPayload.GetSender().equals(ServerManager.SERVER_UUID))
-                            ClearPendingMessage(inPayload.GetMessageID());
-                        else
-                            onMessageReceived.Invoke(inPayload);
-                    }
-                    else if (peers.containsKey(recipient) && peers.get(recipient).GetStatus() == EPeerStatus.CONNECTED)
-                    {
-                        //If the sender is us, forward the message to the recipient and remove the message from the queue.
-                        if (inPayload.GetSender().equals(ServerManager.SERVER_UUID))
-                        {
-                            serverManager.SendMessage(recipient, netMessage);
-                            //See: OnNetMessage > Client > MESSAGE > else
-
-                            ClearPendingMessage(inPayload.GetMessageID());
-                            return;
-                        }
-
-                        //Else if the recipient is us, invoke the OnMessageReceived event.
-                        //Otherwise forward the message to the specified peer.
-                        if (recipient.equals(ServerManager.SERVER_UUID))
-                        {
-                            onMessageReceived.Invoke(inPayload);
-                        }
-                        else
-                        {
-                            serverManager.SendMessage(recipient, netMessage);
-                            //See: OnNetMessage > Client > MESSAGE > else
-                        }
-
-                        //Also send the message back to the sender to indicate that the message has been acknowledged.
-                        serverManager.SendMessage(data.item1, data.item2);
-                        //See: OnNetMessage > Client > MESSAGE > if
-                    }
-                    //Otherwise ignore the request.
-                    break;
-                }
-                default:
-                {
-                    //Invalid message type, ignore the request.
-                    break;
-                }
+                nickname = data.item2.payload.username + (++duplicateCount);
             }
+
+            //Indicate that the client is ready.
+            //All peers should be typeof ServerPeer at this level.
+            peer.username = nickname;
+            peer.SetStatus(EPeerStatus.CONNECTED);
+
+            Logger.Debug(GetLogPrefix() + "Client connected: " + data.item1 + " (" + peer.username + ")");
+            Logger.Info(GetLogPrefix() + "Client connected: " + peer.username);
+
+            //Return the server-validated handshake data back to the client.
+            NetMessage<Peer> response = new NetMessage<>();
+            response.type = EType.HANDSHAKE;
+            response.payload = peer;
+            serverManager.SendMessage(data.item1, response);
+            ///See: OnNetMessage > Client > HANDSHAKE
+
+            //Broadcast the new peer to all other peers.
+            NetMessage<Peer> peerBroadcast = new NetMessage<>();
+            peerBroadcast.type = EType.PEER;
+            peerBroadcast.payload = peer;
+            serverManager.BroadcastMessage(peerBroadcast);
+            ///See: OnNetMessage > Client > PEER
+
+            OnNetConnect(data.item1);
         }
         else
         {
-            /*If the message isn't a EType.MESSAGE and the sender isn't the server,
-             *ignore the request as clients should not be allowed to send other events to each other.*/
-            if (netMessage.type != EType.MESSAGE && !data.item1.equals(ServerManager.SERVER_UUID))
-                return;
+            //From: OnNetMessage > Host > HANDSHAKE
 
-            switch (netMessage.type)
+            id = data.item2.payload.GetUUID();
+
+            Logger.Trace("Connected to server and assigned ID: " + id);
+            Logger.Info(GetLogPrefix() + "Connected to server.");
+
+            //Occurs when the handshake has been acknowledged by the server.
+            //Request a list of peers.
+            NetMessage<EmptyPayload> response = new NetMessage<>();
+            response.type = EType.PEERS;
+            response.payload = new EmptyPayload();
+            client.SendMessage(response);
+
+            ///See: OnNetMessage > Host > PEERS
+        }
+    }
+
+    private void HandlePingData(Pair<UUID, NetMessage<EmptyPayload>> data)
+    {
+        if (isHost)
+        {
+            //Host pings are handled by the PingPong class.
+        }
+        else
+        {
+            //Occurs when the server has sent a ping request.
+            //TODO: Add a timer to check if the server has timed out.
+            //Return a pong.
+            NetMessage<EmptyPayload> response = new NetMessage<>();
+            response.type = EType.PONG;
+            response.payload = new EmptyPayload();
+            client.SendMessage(response);
+        }
+    }
+
+    private void HandlePeerData(Pair<UUID, NetMessage<Peer>> data)
+    {
+        if (isHost)
+        {
+        }
+        else
+        {
+            /*It is more efficient to store this value in a local variable rather than call
+             *the method multiple times as it converts a string value every time.*/
+            UUID payloadID = data.item2.payload.GetUUID();
+
+            switch (data.item2.payload.GetStatus())
             {
-                case HANDSHAKE:
+                case CONNECTED:
                 {
-                    //From: OnNetMessage > Host > HANDSHAKE
+                    //If the client wasn't in the list then fire the connect event (this includes us connecting to the server).
+                    Boolean isNewPeer = !peers.containsKey(payloadID) && !payloadID.equals(ServerManager.SERVER_UUID);
 
-                    Peer inPayload = (Peer)netMessage.payload;
-                    id = inPayload.GetUUID();
+                    //Update the peer in the list (this should be added before the OnNetConnect event is fired).
+                    /*Notice how there is no synchronize block here, this is because I am using a ConcurrentHashMap which is synchronized
+                        *and I am not performing any long operations here so there is no need use a synchronize block here.*/
+                    //TODO: Move this peers.put into the OnNetConnect, due to my current design of that method, it is not possible.
+                    peers.put(payloadID, data.item2.payload);
 
-                    Logger.Trace("Connected to server and assigned ID: " + id);
-                    Logger.Info(GetLogPrefix() + "Connected to server.");
-
-                    //Occurs when the handshake has been acknowledged by the server.
-                    //Request a list of peers.
-                    NetMessage<EmptyPayload> response = new NetMessage<>();
-                    response.type = EType.PEERS;
-                    response.payload = new EmptyPayload();
-                    client.SendMessage(response);
-
-                    ///See: OnNetMessage > Host > PEERS
+                    if (isNewPeer)
+                        OnNetConnect(payloadID);
 
                     break;
                 }
-                case PING:
+                case DISCONNECTED:
                 {
-                    //Occurs when the server has sent a ping request.
-                    //TODO: Add a timer to check if the server has timed out.
-                    //Return a pong.
-                    NetMessage<EmptyPayload> response = new NetMessage<>();
-                    response.type = EType.PONG;
-                    response.payload = new EmptyPayload();
-                    client.SendMessage(response);
-                    break;
-                }
-                case PEER:
-                {
-                    //Occurs when the server has sent a status update of a peer.
-                    Peer inPayload = (Peer)netMessage.payload;
-                    switch (inPayload.GetStatus())
-                    {
-                        case CONNECTED:
-                        {
-                            UUID payloadID = inPayload.GetUUID();
+                    //Remove the peer from the list and fire the disconnect event if we had the peer.
+                    if (!peers.containsKey(payloadID))
+                        return;
 
-                            //If the client wasn't in the list then fire the connect event (this includes us connecting to the server).
-                            Boolean isNewPeer = !peers.containsKey(payloadID) && !payloadID.equals(ServerManager.SERVER_UUID);
-
-                            //Update the peer in the list (this should be added before the OnNetConnect event is fired).
-                            /*Notice how there is no synchronize block here, this is because I am using a ConcurrentHashMap which is synchronized
-                             *and I am not performing any long operations here so there is no need use a synchronize block here.*/
-                            //TODO: Move this peers.put into the OnNetConnect, due to my current design of that method, it is not possible.
-                            peers.put(payloadID, inPayload);
-
-                            if (isNewPeer)
-                                OnNetConnect(payloadID);
-
-                            break;
-                        }
-                        case DISCONNECTED:
-                        {
-                            UUID payloadID = inPayload.GetUUID();
-
-                            //Remove the peer from the list and fire the disconnect event if we had the peer.
-                            if (!peers.containsKey(payloadID))
-                                return;
-
-                            //In this case the event must be fired before the peer is removed from the list.
-                            OnNetClose(payloadID);
-
-                            break;
-                        }
-                        default:
-                        {
-                            //Ignore the message.
-                            break;
-                        }
-                    }
-                    break;
-                }
-                case PEERS:
-                {
-                    //From: OnNetMessage > Host > PEERS
-
-                    //Occurs when the server has sent a new list of peers.
-                    /*The reason for having a separate PEER and PEERS message is so that the server can send a list of peers,
-                     *which is more efficient than sending a PEER message for each peer.*/
-
-                    //Replace the list of peers with the new list.
-                    HashMap<UUID, Peer> oldPeers = new HashMap<>(peers);
-                    peers.clear();
-
-                    for (Peer peer : ((PeersPayload)netMessage.payload).peers)
-                    {
-                        //In my testing it seemed like the payload would include one extra null value.
-                        if (peer == null)
-                            continue;
-
-                        UUID peerUUID = peer.GetUUID();
-
-                        peers.put(peerUUID, peer);
-
-                        //We don't need to check the state of the peer as they should always be connected at this point.
-                        if (!oldPeers.containsKey(peerUUID))
-                        {
-                            OnNetConnect(peerUUID);
-                        }
-                    }
-
-                    /*If the client was in the old list but not the new one, fire the disconnect event.
-                     *While this shouldn't strictly be relied on for disconnect events (as the peer message should send this status update
-                     *it is a good idea to check it here just incase the message is missed.*/
-                    for (UUID peerUUID : oldPeers.keySet())
-                    {
-                        if (!peerUUID.equals(id) && !peerUUID.equals(ServerManager.SERVER_UUID) && !peers.containsKey(peerUUID))
-                            OnNetClose(peerUUID);
-                    }
-                    break;
-                }
-                case MESSAGE:
-                {
-                    //Occurs when the server has sent a message to the client.
-                    MessagePayload inPayload = (MessagePayload)netMessage.payload;
-
-                    UUID messageID = inPayload.GetMessageID();
-                    UUID sender = inPayload.GetSender();
-
-                    //If the sender is us, we can use this response to verify that the message was sent.
-                    //Otherwise we can invoke the message event.
-                    if (sender.equals(id))
-                        ClearPendingMessage(messageID);
-                    else
-                        onMessageReceived.Invoke(inPayload);
+                    //In this case the event must be fired before the peer is removed from the list.
+                    OnNetClose(payloadID);
 
                     break;
                 }
                 default:
                 {
-                    //Invalid message type, ignore the request.
+                    //Ignore the message.
                     break;
                 }
             }
         }
     }
+
+    private void HandlePeersData(Pair<UUID, NetMessage<PeersPayload>> data)
+    {
+        if (isHost)
+        {
+            //(Typically) From: OnNetMessage > Client > HANDSHAKE
+
+            //Send the list of peers to the client.
+            NetMessage<PeersPayload> response = new NetMessage<>();
+            response.type = EType.PEERS;
+            response.payload = new PeersPayload();
+            response.payload.peers = GetReadyPeers();
+            serverManager.SendMessage(data.item1, response);
+
+            ///See: OnNetMessage > Client > PEERS
+        }
+        else
+        {
+            //From: OnNetMessage > Host > PEERS
+
+            //Occurs when the server has sent a new list of peers.
+            /*The reason for having a separate PEER and PEERS message is so that the server can send a list of peers,
+             *which is more efficient than sending a PEER message for each peer.*/
+
+            //Replace the list of peers with the new list.
+            HashMap<UUID, Peer> oldPeers = new HashMap<>(peers);
+            peers.clear();
+
+            for (Peer peer : data.item2.payload.peers)
+            {
+                //In my testing it seemed like the payload would include one extra null value.
+                if (peer == null)
+                    continue;
+
+                UUID peerUUID = peer.GetUUID();
+
+                peers.put(peerUUID, peer);
+
+                //We don't need to check the state of the peer as they should always be connected at this point.
+                if (!oldPeers.containsKey(peerUUID))
+                    OnNetConnect(peerUUID);
+            }
+
+            /*If the client was in the old list but not the new one, fire the disconnect event.
+             *While this shouldn't strictly be relied on for disconnect events (as the peer message should send this status update
+             *it is a good idea to check it here just incase the message is missed.*/
+            for (UUID peerUUID : oldPeers.keySet())
+                if (!peerUUID.equals(id) && !peerUUID.equals(ServerManager.SERVER_UUID) && !peers.containsKey(peerUUID))
+                    OnNetClose(peerUUID);
+        }
+    }
+
+    private void HandleMessageData(Pair<UUID, NetMessage<MessagePayload>> data)
+    {
+        if (isHost)
+        {
+            //Occurs when a client sends a message to be processed by the server.
+
+            //Ignore messages from clients who have not connected yet.
+            if (peers.get(data.item1).GetStatus() != EPeerStatus.CONNECTED)
+                return;
+
+            data.item2.payload.SetSender(data.item1);
+            UUID recipient = data.item2.payload.GetRecipient();
+
+            /*If the recipient is `INVALID_UUID` then broadcast the message to all peers.
+                *Otherwise check if the message is available to be sent to the specified peer.*/
+            if (recipient.equals(ServerManager.INVALID_UUID))
+            {
+                //Broadcast the message to all peers.
+                NetMessage<MessagePayload> message = new NetMessage<>();
+                message.type = EType.MESSAGE;
+                message.payload = data.item2.payload;
+                serverManager.BroadcastMessage(message);
+                //See: OnNetMessage > Host/Client > MESSAGE
+
+                //If we (the server) are the sender then remove the message from the queue.
+                //Otherwise invoke the OnMessageReceived event.
+                if (data.item2.payload.GetSender().equals(ServerManager.SERVER_UUID))
+                    ClearPendingMessage(data.item2.payload.GetMessageID());
+                else
+                    onMessageReceived.Invoke(data.item2.payload);
+            }
+            else if (peers.containsKey(recipient) && peers.get(recipient).GetStatus() == EPeerStatus.CONNECTED)
+            {
+                //If the sender is us, forward the message to the recipient and remove the message from the queue.
+                if (data.item2.payload.GetSender().equals(ServerManager.SERVER_UUID))
+                {
+                    serverManager.SendMessage(recipient, data.item2);
+                    //See: OnNetMessage > Client > MESSAGE > else
+
+                    ClearPendingMessage(data.item2.payload.GetMessageID());
+                    return;
+                }
+
+                //Else if the recipient is us, invoke the OnMessageReceived event.
+                //Otherwise forward the message to the specified peer.
+                if (recipient.equals(ServerManager.SERVER_UUID))
+                {
+                    onMessageReceived.Invoke(data.item2.payload);
+                }
+                else
+                {
+                    serverManager.SendMessage(recipient, data.item2.payload);
+                    //See: OnNetMessage > Client > MESSAGE > else
+                }
+
+                //Also send the message back to the sender to indicate that the message has been acknowledged.
+                serverManager.SendMessage(data.item1, data.item2);
+                //See: OnNetMessage > Client > MESSAGE > if
+            }
+            //Otherwise ignore the request.
+        }
+        else
+        {
+            //Occurs when the server has sent a message to the client.
+            UUID messageID = data.item2.payload.GetMessageID();
+            UUID sender = data.item2.payload.GetSender();
+
+            //If the sender is us, we can use this response to verify that the message was sent.
+            //Otherwise we can invoke the message event.
+            if (sender.equals(id))
+                ClearPendingMessage(messageID);
+            else
+                onMessageReceived.Invoke(data.item2.payload);
+        }
+    }
+    //#endregion
 
     private void OnNetClose(UUID uuid)
     {
@@ -755,9 +787,6 @@ public class ChatManager implements IDisposable
                 return;
             }
         }
-        else
-        {
-        }
 
         //Print the stack trace to a custom stream.
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
@@ -775,9 +804,6 @@ public class ChatManager implements IDisposable
         //Log the error.
         Logger.Error(GetLogPrefix() + "Error in connection: " + error.item1 + " | " + stackTrace);
     }
-    //#endregion
-
-    //#region Dispatched events
     //#endregion
 
     //#region Misc
