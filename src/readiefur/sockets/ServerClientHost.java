@@ -2,6 +2,7 @@ package readiefur.sockets;
 
 import java.net.Socket;
 import java.util.UUID;
+
 public class ServerClientHost extends ASocket
 {
     //used for debugging thread names.

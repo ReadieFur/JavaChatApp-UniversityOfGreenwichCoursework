@@ -2,8 +2,6 @@ package chat_app.frontend;
 
 import java.awt.Color;
 import java.awt.GridBagConstraints;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 
 import javax.swing.plaf.InsetsUIResource;
 

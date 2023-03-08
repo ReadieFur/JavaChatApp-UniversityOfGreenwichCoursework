@@ -189,6 +189,7 @@ public class ChatManager implements IDisposable
                 //NewValue = (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
                 float sleepTime = (((clientHashCode - MIN_HASH_CODE) * (MAX_SLEEP_TIME - MIN_SLEEP_TIME)) / (MAX_HASH_CODE - MIN_HASH_CODE)) + MIN_SLEEP_TIME;
 
+                //Sonarlint wants me to replace this sleep call with a call to <lock>.wait(), however that is not suitable for this situation.
                 try { Thread.sleep((int)sleepTime); }
                 catch (InterruptedException e) {}
             }
