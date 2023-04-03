@@ -31,8 +31,8 @@ goto run
 ::#endregion
 
 :run
-@REM Start 4 instance of the app, 1 will start up as a server, 3 will start up as clients.
-set INSTANCES=4
+@REM Start 3 instance of the app, 1 will start up as a server, 2 will start up as clients.
+set INSTANCES=3
 for /l %%i in (1,1,%INSTANCES%) do (
     @REM echo %COMMAND% %ARGS%
     start "" %COMMAND% %ARGS%
