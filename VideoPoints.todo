@@ -1,0 +1,14 @@
+A. Scenario Demonstration:
+    ☐ You should run a server and three clients, where one of them is coordinator.
+    ☐ Demonstrate how the coordinator works.
+    ☐ Send a message from one of the clients and reply to it back (show private messaging and broadcast messaging).
+    ☐ Quit one client (NOT coordinator) and show the rest two can still communicate.
+    ☐ Run another client.
+    ☐ Quit coordinator now and demonstrate that new coordinator is automatically selected.
+
+B. Implementation Inspection:
+    ☐ Highlight the code in your implementation that implements different design patterns.
+    ☐ Highlight the code in your implementation that implements different components.
+    ☐ Highlight the code in your implementation that implements different JUnit tests.
+
+☐ You should also mention any additional requirements you have implemented or highlight aspects that you are proud of.
