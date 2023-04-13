@@ -15,7 +15,7 @@
 *.war
 *.nar
 *.ear
-*.zip
+# *.zip
 *.tar.gz
 *.rar
 
@@ -329,3 +329,4 @@ TSWLatexianTemp*
 bin/
 /dist.*
 Adobe Premiere Pro Auto-Save/
+SubmissionPart1/
