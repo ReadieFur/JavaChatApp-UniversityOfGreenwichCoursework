@@ -1,4 +1,4 @@
 Name			ID			Contribution%
-Tristan Read	001151378	50%
-Kanat Asanov	001200065	25%
-Aziret Asanov	001200059	25%
+Tristan Read	001151378	40%
+Kanat Asanov	001200065	30%
+Aziret Asanov	001200059	30%
