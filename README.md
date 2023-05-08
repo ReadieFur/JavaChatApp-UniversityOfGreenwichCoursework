@@ -10,10 +10,27 @@
   - [Improvements](#improvements)
   - [Conclusion](#conclusion)
   - [Screenshots](#screenshots)
+  - [Video demonstration](#video-demonstration)
   - [References](#references)
   - [Running the program](#running-the-program)
     - [Running/building from source](#runningbuilding-from-source)
     - [Running from release](#running-from-release)
+  - [Grading feedback](#grading-feedback)
+    - [Implementation:](#implementation)
+      - [Group Formation, Connection and Communication: 10/10](#group-formation-connection-and-communication-1010)
+      - [Group State Maintenance: 10/10](#group-state-maintenance-1010)
+      - [Coordinator Selection:  10/10](#coordinator-selection--1010)
+      - [Use of Design Patterns:  10/10](#use-of-design-patterns--1010)
+      - [Fault Tolerance:  10/10](#fault-tolerance--1010)
+      - [JUnit Based Testing of the Application:  10/10](#junit-based-testing-of-the-application--1010)
+      - [Use of Component-Based Development:  10/10](#use-of-component-based-development--1010)
+    - [Report:](#report)
+      - [Introduction:  4/4](#introduction--44)
+      - [Design/Implementation:  10/10](#designimplementation--1010)
+      - [Analysis and Critical Discussion:  8/8](#analysis-and-critical-discussion--88)
+      - [Conclusions:  4/4](#conclusions--44)
+      - [Presentation Style:  4/4](#presentation-style--44)
+    - [Total: 100%](#total-100)
 
 ## Introduction
 This repository contains the coursework source code and specification for the Advanced Programming module (COMP1549) at the University of Greenwich.  
@@ -76,9 +93,9 @@ Below are some screenshots of the program in action.
 - In this final image we can see that the server has disconnected and that one of old clients have become the server and the other old client has automatically connected to the new server.
   <img src="images/server_disconnect.png" width="700">
 
-<!-- ## Video demonstration -->
-<!-- TODO: Video demonstration -->
-<!-- [![CAPTION](THUMBNAIL)](VIDEO) -->
+## Video demonstration
+<!-- Embed mass storage video -->
+<video src="./VideoDemonstration.mp4" width="700"></video>
 
 ## References
 The timestamps used on here are from cached versions of the pages found on Google and the Wayback Machine, the links are to the original pages.
@@ -106,3 +123,48 @@ Please note that the built jar file on the releases page was built on OpenJDK 11
 - Either
   - Run a single instance by opening the `University_Of_Greenwich-COMP1549-Advanced_Programming-Coursework.jar` file
   - Run the `RunScenario.bat` file to open four instances of the program
+
+## Grading feedback
+This section contains the feedback and grading results of the coursework that was submitted.
+
+### Implementation:
+#### Group Formation, Connection and Communication: 10/10
+The application has been developed as a GUI application. Good group formation and communication. It is possible to broadcast or send direct messages. The application is very user-friendly.
+
+#### Group State Maintenance: 10/10
+The group state is maintained very well. Messages are not timestamped, but it does indicate who a message is from.
+
+#### Coordinator Selection:  10/10
+Outstanding implementation of coordinator selection. I really like how you implemented the selection of a replacement host
+
+#### Use of Design Patterns:  10/10
+Great use of a number of design patterns, which have been correctly implemented.  
+Exemplary implementation of a GUI creation framework, based on XML.
+
+#### Fault Tolerance:  10/10
+Excellent implementation of fault tolerance and validation.
+
+#### JUnit Based Testing of the Application:  10/10
+Excellent set of unit tests.
+
+#### Use of Component-Based Development:  10/10
+Great implementation of a component-based application. It would have been nice to see some components separated into separate libraries.
+
+### Report:
+#### Introduction:  4/4
+Very well-written introduction.
+
+#### Design/Implementation:  10/10
+Very detailed discussion of the design and implementation with outstanding justification for the design and implementation decisions taken. There is a very detailed class diagram.
+
+#### Analysis and Critical Discussion:  8/8
+Excellent analysis, backed by detailed critical discussion.
+
+#### Conclusions:  4/4
+Very well-written conclusion.
+
+#### Presentation Style:  4/4
+The layout and presentation are in the expected format.
+
+### Total: 100%
+Exemplary implementation! Well done 😊
